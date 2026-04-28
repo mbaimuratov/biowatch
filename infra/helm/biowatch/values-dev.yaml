@@ -1,0 +1,11 @@
+secret:
+  create: true
+  postgresPassword: biowatch
+  databaseUrl: postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch
+
+ingress:
+  enabled: true
+  host: biowatch.local
+
+networkPolicy:
+  enabled: true

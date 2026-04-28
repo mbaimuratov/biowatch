@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}BioWatch{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='vendor/pico.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+    <script src="{{ url_for('static', path='vendor/htmx.min.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="container site-header">
+      <nav>
+        <ul>
+          <li><strong>BioWatch</strong></li>
+        </ul>
+        <ul>
+          <li><a href="/">Topics</a></li>
+          <li><a href="/ui/papers">Papers</a></li>
+          <li><a href="/ui/ingestion-runs">Ingestion Runs</a></li>
+          <li><a href="/ui/search">Search</a></li>
+          <li><a href="/health">Health</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main class="container">
+      {% if message %}
+        <p class="notice success">{{ message }}</p>
+      {% endif %}
+      {% if error %}
+        <p class="notice error">{{ error }}</p>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

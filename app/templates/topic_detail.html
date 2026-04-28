@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ topic.name }} - BioWatch{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <p><a href="/">Topics</a></p>
+      <h1>{{ topic.name }}</h1>
+      <p>{{ topic.query }}</p>
+    </div>
+    <form method="post" action="/ui/topics/{{ topic.id }}/ingest" hx-post="/ui/topics/{{ topic.id }}/ingest" hx-target="#ingest-status" hx-swap="outerHTML">
+      <button type="submit">Trigger Ingestion</button>
+    </form>
+  </section>
+
+  <div id="ingest-status"></div>
+
+  <section>
+    <h2>Matched Papers</h2>
+    {% include "partials/paper_table.html" %}
+  </section>
+
+  <section>
+    <h2>Topic Ingestion Runs</h2>
+    {% with runs=runs %}
+      {% include "partials/run_table.html" %}
+    {% endwith %}
+  </section>
+{% endblock %}

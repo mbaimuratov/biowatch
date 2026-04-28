@@ -1,0 +1,8 @@
+{% if error %}
+  <p class="notice error">{{ error }}</p>
+{% elif query %}
+  <h2>Results for "{{ query }}"</h2>
+  {% include "partials/paper_table.html" %}
+{% else %}
+  <p class="empty">Enter a query to search indexed papers.</p>
+{% endif %}

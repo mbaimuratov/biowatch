@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: biowatch-migrate
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: migration
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: biowatch
+        app.kubernetes.io/component: migration
+    spec:
+      serviceAccountName: biowatch-migration
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: biowatch:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              python - <<'PY'
+              import socket
+              import time
+
+              deadline = time.time() + 120
+              while time.time() < deadline:
+                  try:
+                      with socket.create_connection(("biowatch-postgres", 5432), timeout=3):
+                          raise SystemExit(0)
+                  except OSError:
+                      time.sleep(2)
+              raise SystemExit("postgres is not reachable")
+              PY
+      containers:
+        - name: migrate
+          image: biowatch:dev
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: biowatch-config
+            - secretRef:
+                name: biowatch-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

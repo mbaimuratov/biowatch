@@ -1,0 +1,39 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "biowatch.fullname" . }}-migrate
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "migration") | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "migration") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "migration") }}
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              {{- include "biowatch.waitForPostgres" . | nindent 14 }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.migration.resources | nindent 12 }}
+{{- end }}

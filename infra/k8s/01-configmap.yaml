@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: biowatch-config
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+data:
+  BIOWATCH_APP_NAME: BioWatch
+  BIOWATCH_ENVIRONMENT: kind
+  BIOWATCH_REDIS_URL: redis://biowatch-redis:6379/0
+  BIOWATCH_ELASTICSEARCH_URL: http://biowatch-elasticsearch:9200
+  BIOWATCH_ELASTICSEARCH_INDEX: biowatch-papers
+  BIOWATCH_ELASTICSEARCH_TIMEOUT_SECONDS: "10.0"
+  BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS: "10.0"
+  BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS: "3"
+  BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS: "0.25"
+  POSTGRES_DB: biowatch
+  POSTGRES_USER: biowatch

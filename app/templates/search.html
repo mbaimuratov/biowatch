@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Search - BioWatch{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <h1>Search Papers</h1>
+      <p>Search indexed paper titles, abstracts, journals, DOI, and source metadata.</p>
+    </div>
+  </section>
+
+  <form method="get" action="/ui/search" hx-get="/ui/search/results" hx-target="#search-results" hx-push-url="/ui/search">
+    <label>
+      Query
+      <input type="search" name="q" required value="{{ q }}" placeholder="biomarker">
+    </label>
+    <button type="submit">Search</button>
+  </form>
+
+  <div id="search-results">
+    {% include "partials/search_results.html" %}
+  </div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Topics - BioWatch{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <h1>Tracked Topics</h1>
+      <p>Monitor biomedical literature queries and queue Europe PMC ingestion jobs.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Create Topic</h2>
+    <form method="post" action="/ui/topics">
+      <label>
+        Name
+        <input name="name" maxlength="255" required value="{{ form.name if form else '' }}">
+      </label>
+      <label>
+        Query
+        <textarea name="query" maxlength="1000" required>{{ form.query if form else '' }}</textarea>
+      </label>
+      <label>
+        <input type="checkbox" name="enabled" role="switch" value="true" {% if not form or form.enabled %}checked{% endif %}>
+        Enabled
+      </label>
+      <button type="submit">Create Topic</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Topics</h2>
+    {% if topics %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Query</th>
+              <th>Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for topic in topics %}
+              <tr>
+                <td><a href="/ui/topics/{{ topic.id }}">{{ topic.name }}</a></td>
+                <td class="truncate">{{ topic.query }}</td>
+                <td>
+                  {% if topic.enabled %}
+                    <span class="badge success">enabled</span>
+                  {% else %}
+                    <span class="badge muted">disabled</span>
+                  {% endif %}
+                </td>
+                <td>{{ topic.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">No topics yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

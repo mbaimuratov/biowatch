@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: biowatch
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: api
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: biowatch.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: biowatch-api
+                port:
+                  name: http

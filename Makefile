@@ -1,0 +1,48 @@
+PYTHON ?= python3.12
+VENV ?= .venv
+BIN := $(VENV)/bin
+
+.PHONY: install run worker test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template
+
+install:
+	$(PYTHON) -m venv $(VENV)
+	$(BIN)/python -m pip install --upgrade pip
+	$(BIN)/python -m pip install -e ".[dev]"
+
+run:
+	$(BIN)/uvicorn app.main:app --reload
+
+worker:
+	$(BIN)/rq worker -u redis://localhost:56379/0 biowatch-ingestion
+
+test:
+	$(BIN)/pytest
+
+lint:
+	$(BIN)/ruff check .
+
+format:
+	$(BIN)/ruff format .
+
+compose-up:
+	docker compose up -d postgres redis elasticsearch api worker
+
+compose-down:
+	docker compose down
+
+db-migrate:
+	$(BIN)/alembic upgrade head
+
+db-revision:
+	$(BIN)/alembic revision --autogenerate -m "$(m)"
+
+k8s-dry-run:
+	kubectl apply --dry-run=client -f infra/k8s/
+
+helm-lint:
+	helm lint infra/helm/biowatch -f infra/helm/biowatch/values-dev.yaml
+
+helm-template:
+	helm template biowatch infra/helm/biowatch \
+		--namespace biowatch \
+		-f infra/helm/biowatch/values-dev.yaml

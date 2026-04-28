@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biowatch-worker
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: biowatch
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: biowatch
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: biowatch-worker
+      containers:
+        - name: worker
+          image: biowatch:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - rq
+            - worker
+            - -u
+            - redis://biowatch-redis:6379/0
+            - biowatch-ingestion
+          envFrom:
+            - configMapRef:
+                name: biowatch-config
+            - secretRef:
+                name: biowatch-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -1,0 +1,46 @@
+image:
+  repository: ghcr.io/example/biowatch
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+app:
+  environment: production
+
+secret:
+  create: false
+  existingSecret: biowatch-secret
+
+api:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+worker:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+postgres:
+  persistence:
+    size: 20Gi
+
+elasticsearch:
+  persistence:
+    size: 20Gi
+
+ingress:
+  enabled: true
+  host: biowatch.example.com
+
+networkPolicy:
+  enabled: true

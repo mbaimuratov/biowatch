@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Ingestion Runs - BioWatch{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <h1>Ingestion Runs</h1>
+      <p>Queue and worker status for topic ingestion jobs.</p>
+    </div>
+  </section>
+
+  {% include "partials/run_table.html" %}
+{% endblock %}

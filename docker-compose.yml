@@ -1,0 +1,94 @@
+services:
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      BIOWATCH_ENVIRONMENT: local
+      BIOWATCH_DATABASE_URL: postgresql+asyncpg://biowatch:biowatch@postgres:5432/biowatch
+      BIOWATCH_REDIS_URL: redis://redis:6379/0
+      BIOWATCH_ELASTICSEARCH_URL: http://elasticsearch:9200
+      BIOWATCH_ELASTICSEARCH_INDEX: biowatch-papers
+      BIOWATCH_ELASTICSEARCH_TIMEOUT_SECONDS: 10.0
+      BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS: 10.0
+      BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS: 3
+      BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS: 0.25
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: rq worker -u redis://redis:6379/0 biowatch-ingestion
+    environment:
+      BIOWATCH_ENVIRONMENT: local
+      BIOWATCH_DATABASE_URL: postgresql+asyncpg://biowatch:biowatch@postgres:5432/biowatch
+      BIOWATCH_REDIS_URL: redis://redis:6379/0
+      BIOWATCH_ELASTICSEARCH_URL: http://elasticsearch:9200
+      BIOWATCH_ELASTICSEARCH_INDEX: biowatch-papers
+      BIOWATCH_ELASTICSEARCH_TIMEOUT_SECONDS: 10.0
+      BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS: 10.0
+      BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS: 3
+      BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS: 0.25
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: biowatch
+      POSTGRES_USER: biowatch
+      POSTGRES_PASSWORD: biowatch
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biowatch -d biowatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "59200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgres_data:
+  elasticsearch_data:

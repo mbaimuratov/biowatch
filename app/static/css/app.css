@@ -1,0 +1,105 @@
+:root {
+  --biowatch-border: #d8dee4;
+  --biowatch-muted: #57606a;
+  --biowatch-success-bg: #dafbe1;
+  --biowatch-success-fg: #116329;
+  --biowatch-error-bg: #ffebe9;
+  --biowatch-error-fg: #cf222e;
+  --biowatch-info-bg: #ddf4ff;
+  --biowatch-info-fg: #0969da;
+}
+
+.site-header {
+  padding-top: 1rem;
+}
+
+.page-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.page-heading h1 {
+  margin-bottom: 0.25rem;
+}
+
+.panel {
+  border: 1px solid var(--biowatch-border);
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  padding: 1rem;
+}
+
+.notice {
+  border-radius: 6px;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+}
+
+.notice.success {
+  background: var(--biowatch-success-bg);
+  color: var(--biowatch-success-fg);
+}
+
+.notice.error {
+  background: var(--biowatch-error-bg);
+  color: var(--biowatch-error-fg);
+}
+
+.badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.35rem 0.55rem;
+}
+
+.badge.success,
+.badge.completed {
+  background: var(--biowatch-success-bg);
+  color: var(--biowatch-success-fg);
+}
+
+.badge.queued,
+.badge.running {
+  background: var(--biowatch-info-bg);
+  color: var(--biowatch-info-fg);
+}
+
+.badge.failed {
+  background: var(--biowatch-error-bg);
+  color: var(--biowatch-error-fg);
+}
+
+.badge.muted {
+  background: #f6f8fa;
+  color: var(--biowatch-muted);
+}
+
+.empty {
+  color: var(--biowatch-muted);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.truncate {
+  max-width: 34rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .page-heading {
+    display: block;
+  }
+}

@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: biowatch-api
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: biowatch-worker
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: worker
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: biowatch-migration
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: migration
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: biowatch-runtime
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: biowatch-api-runtime
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: biowatch-runtime
+subjects:
+  - kind: ServiceAccount
+    name: biowatch-api
+    namespace: biowatch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: biowatch-worker-runtime
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: worker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: biowatch-runtime
+subjects:
+  - kind: ServiceAccount
+    name: biowatch-worker
+    namespace: biowatch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: biowatch-migration-runtime
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: migration
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: biowatch-runtime
+subjects:
+  - kind: ServiceAccount
+    name: biowatch-migration
+    namespace: biowatch

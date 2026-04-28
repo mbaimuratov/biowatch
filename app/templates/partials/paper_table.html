@@ -1,0 +1,34 @@
+{% if papers %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Journal</th>
+          <th>Published</th>
+          <th>Source</th>
+          <th>DOI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for paper in papers %}
+          <tr>
+            <td>
+              {% if paper.url %}
+                <a href="{{ paper.url }}" rel="noreferrer">{{ paper.title }}</a>
+              {% else %}
+                {{ paper.title }}
+              {% endif %}
+            </td>
+            <td>{{ paper.journal or "Unknown" }}</td>
+            <td>{{ paper.publication_date.isoformat() if paper.publication_date else "Unknown" }}</td>
+            <td>{{ paper.source }}:{{ paper.source_id }}</td>
+            <td>{{ paper.doi or "None" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="empty">No papers found.</p>
+{% endif %}
