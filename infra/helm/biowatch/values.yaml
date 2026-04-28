@@ -14,6 +14,11 @@ app:
   europePmcMaxAttempts: "3"
   europePmcRetryBackoffSeconds: "0.25"
 
+observability:
+  prometheus:
+    scrape: true
+    apiPath: /metrics
+
 secret:
   create: false
   existingSecret: biowatch-secret
@@ -31,6 +36,7 @@ api:
   replicaCount: 1
   service:
     port: 8000
+    annotations: {}
   resources:
     requests:
       cpu: 100m
@@ -48,6 +54,10 @@ api:
 
 worker:
   replicaCount: 1
+  metrics:
+    port: 9100
+    service:
+      annotations: {}
   resources:
     requests:
       cpu: 100m

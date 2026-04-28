@@ -13,7 +13,7 @@ run:
 	$(BIN)/uvicorn app.main:app --reload
 
 worker:
-	$(BIN)/rq worker -u redis://localhost:56379/0 biowatch-ingestion
+	$(BIN)/python -m app.jobs.worker
 
 test:
 	$(BIN)/pytest
@@ -25,7 +25,7 @@ format:
 	$(BIN)/ruff format .
 
 compose-up:
-	docker compose up -d postgres redis elasticsearch api worker
+	docker compose up -d postgres redis elasticsearch api worker prometheus grafana
 
 compose-down:
 	docker compose down

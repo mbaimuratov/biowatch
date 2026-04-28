@@ -67,16 +67,25 @@ The server-rendered dashboard is available at:
 http://127.0.0.1:8000/
 ```
 
+Metrics and local observability are available at:
+
+```text
+API metrics:    http://127.0.0.1:8000/metrics
+Worker metrics: http://127.0.0.1:9100/metrics
+Prometheus:     http://127.0.0.1:9090
+Grafana:        http://127.0.0.1:3000
+```
+
 ## Development Commands
 
 ```sh
 make test       # run pytest
 make lint       # run ruff checks
 make format     # format with ruff
-make compose-up # start PostgreSQL, Redis, Elasticsearch, API, and worker
+make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, Prometheus, and Grafana
 make compose-down
 make db-migrate # apply Alembic migrations
-make worker     # run a local RQ worker against local Redis
+make worker     # run a local RQ worker with metrics against local Redis
 make k8s-dry-run
 make helm-lint
 make helm-template
@@ -162,6 +171,57 @@ docker compose exec api alembic upgrade head
 docker compose logs -f worker
 ```
 
+## Observability
+
+BioWatch exposes Prometheus metrics and JSON structured logs for the API and
+worker. The API serves `/metrics`; the worker serves metrics on port `9100`.
+Docker Compose also starts Prometheus and Grafana with a preloaded BioWatch
+dashboard.
+
+Start the local observability stack:
+
+```sh
+docker compose up --build
+```
+
+Inspect metrics directly:
+
+```sh
+curl http://127.0.0.1:8000/metrics
+curl http://127.0.0.1:9100/metrics
+```
+
+Open Prometheus and Grafana:
+
+```text
+http://127.0.0.1:9090
+http://127.0.0.1:3000
+```
+
+Grafana local credentials are `admin` / `admin`.
+
+Useful Prometheus queries:
+
+```promql
+sum(rate(biowatch_api_requests_total[5m])) by (path)
+sum(rate(biowatch_api_request_errors_total[5m]))
+histogram_quantile(0.95, sum(rate(biowatch_api_request_latency_seconds_bucket[5m])) by (le, path))
+increase(biowatch_ingestion_jobs_total[1h])
+increase(biowatch_ingestion_records_fetched_total[1h])
+```
+
+For Kubernetes, raw manifests add Prometheus scrape annotations to API and
+worker Services and include a scrape config ConfigMap at
+`infra/k8s/60-prometheus-scrape-config.yaml`. The Helm chart renders the same
+scrape annotations by default and exposes the worker metrics Service.
+
+Port-forward metrics in Kubernetes:
+
+```sh
+kubectl -n biowatch port-forward svc/biowatch-api 8000:8000
+kubectl -n biowatch port-forward svc/biowatch-worker 9100:9100
+```
+
 Europe PMC client settings can be configured with:
 
 ```sh
@@ -171,6 +231,7 @@ BIOWATCH_ELASTICSEARCH_TIMEOUT_SECONDS=10.0
 BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS=10.0
 BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS=3
 BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS=0.25
+BIOWATCH_WORKER_METRICS_PORT=9100
 ```
 
 Run tests:

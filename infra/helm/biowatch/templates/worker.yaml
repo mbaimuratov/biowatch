@@ -1,3 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "biowatch.fullname" . }}-worker
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "worker") | nindent 4 }}
+  annotations:
+    {{- if .Values.observability.prometheus.scrape }}
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: {{ .Values.worker.metrics.port | quote }}
+    {{- end }}
+    {{- with .Values.worker.metrics.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ports:
+    - name: metrics
+      port: {{ .Values.worker.metrics.port }}
+      targetPort: metrics
+  selector:
+    {{- include "biowatch.selectorLabels" (dict "root" . "component" "worker") | nindent 4 }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,11 +43,12 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            - rq
-            - worker
-            - -u
-            - {{ printf "redis://%s-redis:6379/0" (include "biowatch.fullname" .) | quote }}
-            - biowatch-ingestion
+            - python
+            - -m
+            - app.jobs.worker
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.worker.metrics.port }}
           env:
             {{- include "biowatch.appEnv" . | nindent 12 }}
           resources:

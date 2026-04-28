@@ -16,6 +16,7 @@ class Settings:
     europe_pmc_timeout_seconds: float = 10.0
     europe_pmc_max_attempts: int = 3
     europe_pmc_retry_backoff_seconds: float = 0.25
+    worker_metrics_port: int = 9100
     pubmed_base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
@@ -61,6 +62,9 @@ def get_settings() -> Settings:
                 "BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS",
                 str(Settings.europe_pmc_retry_backoff_seconds),
             )
+        ),
+        worker_metrics_port=int(
+            getenv("BIOWATCH_WORKER_METRICS_PORT", str(Settings.worker_metrics_port))
         ),
         pubmed_base_url=getenv("BIOWATCH_PUBMED_BASE_URL", Settings.pubmed_base_url),
     )

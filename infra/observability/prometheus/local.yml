@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: biowatch-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - api:8000
+
+  - job_name: biowatch-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - worker:9100
