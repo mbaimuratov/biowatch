@@ -8,9 +8,14 @@
       <h1>{{ topic.name }}</h1>
       <p>{{ topic.query }}</p>
     </div>
-    <form method="post" action="/ui/topics/{{ topic.id }}/ingest" hx-post="/ui/topics/{{ topic.id }}/ingest" hx-target="#ingest-status" hx-swap="outerHTML">
-      <button type="submit">Trigger Ingestion</button>
-    </form>
+    <div class="action-row">
+      <form method="post" action="/ui/topics/{{ topic.id }}/ingest" hx-post="/ui/topics/{{ topic.id }}/ingest" hx-target="#ingest-status" hx-swap="outerHTML">
+        <button type="submit">Trigger Ingestion</button>
+      </form>
+      <form method="post" action="/ui/topics/{{ topic.id }}/delete">
+        <button type="submit" class="danger">Delete Topic</button>
+      </form>
+    </div>
   </section>
 
   <div id="ingest-status"></div>

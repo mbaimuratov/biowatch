@@ -95,6 +95,7 @@ GET  /health
 POST /topics
 GET  /topics
 GET  /topics/{topic_id}
+DELETE /topics/{topic_id}
 POST /topics/{topic_id}/ingest
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
@@ -127,6 +128,12 @@ Confirm the worker updated the run and stored papers:
 ```sh
 curl http://127.0.0.1:8000/ingestion-runs
 curl http://127.0.0.1:8000/topics/1/papers
+```
+
+Delete a topic:
+
+```sh
+curl -X DELETE http://127.0.0.1:8000/topics/1
 ```
 
 Search indexed papers:
