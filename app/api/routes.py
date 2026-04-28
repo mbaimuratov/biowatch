@@ -9,10 +9,12 @@ from app.jobs.ingestion import process_ingestion_run_job
 from app.jobs.queues import get_ingestion_queue
 from app.schemas.ingestion_runs import IngestionRunRead
 from app.schemas.papers import PaperRead
+from app.schemas.subscriptions import SubscriptionIngestDueRead
 from app.schemas.topics import TopicCreate, TopicRead
 from app.search.client import PaperSearchClient, SearchError
 from app.services import ingestion as ingestion_service
 from app.services import papers as paper_service
+from app.services import subscriptions as subscription_service
 from app.services import topics as topic_service
 
 router = APIRouter()
@@ -99,9 +101,35 @@ async def ingest_topic(
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
 
-    run = await ingestion_service.create_queued_run(session, topic)
-    job = ingestion_queue.enqueue(process_ingestion_run_job, run.id)
-    return await ingestion_service.mark_run_enqueued(session, run, job.id)
+    return await ingestion_service.enqueue_topic_ingestion(
+        session,
+        topic,
+        ingestion_queue,
+        process_ingestion_run_job,
+    )
+
+
+@router.post(
+    "/subscriptions/ingest-due",
+    response_model=SubscriptionIngestDueRead,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["subscriptions"],
+)
+async def ingest_due_topics(
+    session: SessionDep,
+    ingestion_queue: IngestionQueueDep,
+) -> SubscriptionIngestDueRead:
+    result = await subscription_service.enqueue_due_topic_ingestions(
+        session,
+        ingestion_queue,
+        process_ingestion_run_job,
+    )
+    return SubscriptionIngestDueRead(
+        topics_checked=result.topics_checked,
+        topics_enqueued=result.topics_enqueued,
+        ingestion_run_ids=result.ingestion_run_ids,
+        job_ids=result.job_ids,
+    )
 
 
 @router.get("/topics/{topic_id}/papers", response_model=list[PaperRead], tags=["papers"])

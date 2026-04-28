@@ -44,6 +44,12 @@ def test_ingestion_endpoint_enqueues_run_without_fetching_papers(client: TestCli
     assert len(fake_queue.enqueued) == 1
     assert fake_queue.enqueued[0][1] == (ingestion_run["id"],)
 
+    topic_response = client.get(f"/topics/{topic_id}")
+    assert topic_response.status_code == 200
+    topic = topic_response.json()
+    assert topic["last_ingested_at"] is not None
+    assert topic["last_successful_ingestion_at"] is None
+
     papers_response = client.get(f"/topics/{topic_id}/papers")
 
     assert papers_response.status_code == 200
