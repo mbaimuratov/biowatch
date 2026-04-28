@@ -81,6 +81,43 @@ async def dashboard_topic_detail(
     session: SessionDep,
     message: str | None = None,
 ) -> HTMLResponse:
+    return await _render_topic_detail(request, session, topic_id, message=message)
+
+
+@router.post("/ui/topics/{topic_id}/delete", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard_delete_topic(
+    request: Request,
+    topic_id: int,
+    session: SessionDep,
+) -> Response:
+    try:
+        deleted = await topic_service.delete_topic(session, topic_id)
+    except topic_service.TopicHasActiveIngestionError:
+        return await _render_topic_detail(
+            request,
+            session,
+            topic_id,
+            error="Topic cannot be deleted while ingestion is queued or running.",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
+
+    return RedirectResponse(
+        "/?message=Topic%20deleted",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _render_topic_detail(
+    request: Request,
+    session: AsyncSession,
+    topic_id: int,
+    message: str | None = None,
+    error: str | None = None,
+    status_code: int = status.HTTP_200_OK,
+) -> HTMLResponse:
     topic = await topic_service.get_topic(session, topic_id)
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
@@ -96,7 +133,9 @@ async def dashboard_topic_detail(
             "papers": papers,
             "runs": topic_runs,
             "message": message,
+            "error": error,
         },
+        status_code=status_code,
     )
 
 

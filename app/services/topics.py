@@ -1,8 +1,14 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Topic
+from app.models import IngestionRun, Topic
 from app.schemas.topics import TopicCreate
+
+ACTIVE_INGESTION_STATUSES = ("queued", "running")
+
+
+class TopicHasActiveIngestionError(Exception):
+    pass
 
 
 async def create_topic(session: AsyncSession, data: TopicCreate) -> Topic:
@@ -24,3 +30,24 @@ async def list_topics(session: AsyncSession) -> list[Topic]:
 
 async def get_topic(session: AsyncSession, topic_id: int) -> Topic | None:
     return await session.get(Topic, topic_id)
+
+
+async def delete_topic(session: AsyncSession, topic_id: int) -> bool:
+    topic = await get_topic(session, topic_id)
+    if topic is None:
+        return False
+
+    active_run_id = await session.scalar(
+        select(IngestionRun.id)
+        .where(
+            IngestionRun.topic_id == topic_id,
+            IngestionRun.status.in_(ACTIVE_INGESTION_STATUSES),
+        )
+        .limit(1)
+    )
+    if active_run_id is not None:
+        raise TopicHasActiveIngestionError
+
+    await session.delete(topic)
+    await session.commit()
+    return True

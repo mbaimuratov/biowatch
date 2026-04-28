@@ -66,6 +66,34 @@ def test_dashboard_create_topic_form_creates_topic(client: TestClient) -> None:
     assert "cancer immunotherapy checkpoint inhibitor" in detail_response.text
 
 
+def test_dashboard_delete_topic_redirects_to_topic_list(client: TestClient) -> None:
+    topic_id = _create_topic(client)
+
+    response = client.post(f"/ui/topics/{topic_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/?message=Topic%20deleted"
+
+    list_response = client.get(response.headers["location"])
+    assert list_response.status_code == 200
+    assert "Topic deleted" in list_response.text
+    assert "No topics yet." in list_response.text
+
+
+def test_dashboard_delete_topic_rejects_active_ingestion_run(
+    client: TestClient,
+    async_session_factory,
+) -> None:
+    topic_id = _create_topic(client)
+    asyncio.run(_create_ingestion_run(async_session_factory, topic_id, status="queued"))
+
+    response = client.post(f"/ui/topics/{topic_id}/delete")
+
+    assert response.status_code == 409
+    assert "Topic cannot be deleted while ingestion is queued or running." in response.text
+    assert "Checkpoint inhibitors" in response.text
+
+
 def test_dashboard_topic_detail_lists_papers(
     client: TestClient,
     async_session_factory,
@@ -176,12 +204,16 @@ async def _create_topic_paper(async_session_factory, topic_id: int) -> int:
         return paper.id
 
 
-async def _create_ingestion_run(async_session_factory, topic_id: int) -> None:
+async def _create_ingestion_run(
+    async_session_factory,
+    topic_id: int,
+    status: str = "completed",
+) -> None:
     async with async_session_factory() as session:
         session.add(
             IngestionRun(
                 topic_id=topic_id,
-                status="completed",
+                status=status,
                 job_id="run-job-id",
                 records_fetched=2,
             )
