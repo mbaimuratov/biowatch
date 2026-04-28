@@ -179,6 +179,23 @@ Run tests:
 make test
 ```
 
+## Continuous Integration
+
+GitHub Actions CI runs on pull requests and pushes to `main`.
+
+CI validates:
+
+- `ruff check .`
+- `pytest`
+- Docker builds for `biowatch-api:ci` and `biowatch-worker:ci`
+- `helm lint`
+- `helm template` with development and production-like values
+
+The current workflow does not deploy to Kubernetes or cloud infrastructure, and
+it does not push Docker images. No repository secrets are required right now.
+Future image publishing can use `GITHUB_TOKEN` package permissions or registry
+credentials such as `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
+
 ## Kubernetes and Helm
 
 BioWatch includes raw Kubernetes manifests under `infra/k8s` and a Helm chart
