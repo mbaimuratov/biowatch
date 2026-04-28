@@ -69,6 +69,8 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.app.europePmcMaxAttempts | quote }}
 - name: BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS
   value: {{ .Values.app.europePmcRetryBackoffSeconds | quote }}
+- name: BIOWATCH_WORKER_METRICS_PORT
+  value: {{ .Values.worker.metrics.port | quote }}
 - name: BIOWATCH_DATABASE_URL
   valueFrom:
     secretKeyRef:

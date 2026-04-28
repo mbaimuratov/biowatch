@@ -4,6 +4,15 @@ metadata:
   name: {{ include "biowatch.fullname" . }}-api
   labels:
     {{- include "biowatch.componentLabels" (dict "root" . "component" "api") | nindent 4 }}
+  annotations:
+    {{- if .Values.observability.prometheus.scrape }}
+    prometheus.io/scrape: "true"
+    prometheus.io/path: {{ .Values.observability.prometheus.apiPath | quote }}
+    prometheus.io/port: {{ .Values.api.service.port | quote }}
+    {{- end }}
+    {{- with .Values.api.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   ports:
     - name: http
