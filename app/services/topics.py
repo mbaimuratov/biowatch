@@ -16,6 +16,8 @@ async def create_topic(session: AsyncSession, data: TopicCreate) -> Topic:
         name=data.name,
         query=data.query,
         enabled=data.enabled,
+        ingestion_frequency=data.ingestion_frequency,
+        max_results_per_run=data.max_results_per_run,
     )
     session.add(topic)
     await session.commit()

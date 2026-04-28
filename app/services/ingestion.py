@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -46,6 +47,23 @@ async def mark_run_enqueued(session: AsyncSession, run: IngestionRun, job_id: st
     return run
 
 
+async def enqueue_topic_ingestion(
+    session: AsyncSession,
+    topic: Topic,
+    ingestion_queue: object,
+    job_func: Callable[[int], int],
+    enqueued_at: datetime | None = None,
+) -> IngestionRun:
+    run = await create_queued_run(session, topic)
+    job = ingestion_queue.enqueue(job_func, run.id)
+    run.job_id = job.id
+    topic.last_ingested_at = enqueued_at or _utc_now()
+    await session.commit()
+    await session.refresh(run)
+    await session.refresh(topic)
+    return run
+
+
 async def process_ingestion_run(
     session: AsyncSession,
     run_id: int,
@@ -73,7 +91,7 @@ async def process_ingestion_run(
     await session.commit()
 
     try:
-        search_response = await client.search(topic.query, page_size=25)
+        search_response = await client.search(topic.query, page_size=topic.max_results_per_run)
         payloads = _normalize_search_response(search_response)
         for payload in payloads:
             paper = await _upsert_paper(session, payload)
@@ -83,6 +101,7 @@ async def process_ingestion_run(
         run.status = STATUS_COMPLETED
         run.records_fetched = len(payloads)
         run.finished_at = _utc_now()
+        topic.last_successful_ingestion_at = run.finished_at
     except Exception as exc:
         run.status = STATUS_FAILED
         run.error_message = str(exc)

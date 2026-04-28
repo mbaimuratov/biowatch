@@ -106,6 +106,7 @@ GET  /topics
 GET  /topics/{topic_id}
 DELETE /topics/{topic_id}
 POST /topics/{topic_id}/ingest
+POST /subscriptions/ingest-due
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
@@ -144,6 +145,19 @@ Delete a topic:
 ```sh
 curl -X DELETE http://127.0.0.1:8000/topics/1
 ```
+
+Enqueue subscription-style ingestion for all enabled topics that are due:
+
+```sh
+curl -X POST http://127.0.0.1:8000/subscriptions/ingest-due
+```
+
+Manual ingestion still exists for one-off topic refreshes. The subscription
+endpoint checks enabled topics, enqueues only topics due by their configured
+`ingestion_frequency`, updates `last_ingested_at` when a run is queued, and
+leaves `last_successful_ingestion_at` for the worker to update after a
+successful ingestion run. This is the app-level foundation for a future
+Kubernetes CronJob; no scheduler dependency or CronJob is required yet.
 
 Search indexed papers:
 
