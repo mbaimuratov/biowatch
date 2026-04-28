@@ -6,6 +6,10 @@ metadata:
   labels:
     app.kubernetes.io/name: biowatch
     app.kubernetes.io/component: api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8000"
 spec:
   ports:
     - name: http
