@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -64,6 +64,24 @@ async def get_topic(
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
     return topic
+
+
+@router.delete("/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["topics"])
+async def delete_topic(
+    topic_id: int,
+    session: SessionDep,
+) -> Response:
+    try:
+        deleted = await topic_service.delete_topic(session, topic_id)
+    except topic_service.TopicHasActiveIngestionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Topic has active ingestion runs",
+        ) from exc
+
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
