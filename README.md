@@ -85,10 +85,11 @@ Grafana:        http://127.0.0.1:3000
 make test       # run pytest
 make lint       # run ruff checks
 make format     # format with ruff
-make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, Prometheus, and Grafana
+make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, bot, Prometheus, and Grafana
 make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
+make bot        # run the Telegram bot with long polling
 make k8s-dry-run
 make helm-lint
 make helm-template
@@ -100,17 +101,53 @@ Create a new Alembic migration:
 make db-revision m="describe change"
 ```
 
-## Telegram Subscription Model
+## Telegram Bot MVP
 
-BioWatch stores Telegram subscribers and per-subscriber topic ownership so the
-future bot service can manage reading preferences without web authentication.
-Subscriber settings include timezone, morning send time, article count, and
-enabled status. Existing global topics are still supported with no subscriber
-attached, which keeps the API and dashboard useful as admin/debug surfaces.
+BioWatch includes a Telegram bot service that uses long polling. The bot stores
+Telegram subscribers and per-subscriber topic ownership so users can configure
+reading preferences without web authentication. Existing global topics are still
+supported with no subscriber attached, which keeps the API and dashboard useful
+as admin/debug surfaces.
 
-Telegram long polling, bot commands, Telegram tokens, message sending,
-webhooks, delivery runs, and Kubernetes CronJobs are intentionally not included
-yet. Those come in later Telegram phases.
+Set the bot token in your local environment. Do not commit real Telegram tokens;
+rotate any token that was pasted into chat, logs, or source control.
+
+```sh
+BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
+```
+
+Run the bot locally:
+
+```sh
+make bot
+```
+
+Or run it with Docker Compose:
+
+```sh
+docker compose up --build bot
+```
+
+Supported bot commands:
+
+```text
+/start
+/help
+/settings
+/topics
+/addtopic Spatial transcriptomics | spatial transcriptomics tumor microenvironment cancer
+/removetopic 3
+/pause
+/resume
+/count 5
+/time 08:30
+/timezone Europe/Rome
+/digest
+```
+
+The bot can manage topics/settings and send an immediate subscriber-scoped
+digest. Scheduled morning delivery, webhooks, delivery-run tables, Kubernetes
+CronJobs, and AI summaries are intentionally not included yet.
 
 ## MVP API
 
