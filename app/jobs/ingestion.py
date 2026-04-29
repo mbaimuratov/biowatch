@@ -1,8 +1,8 @@
-import asyncio
 import logging
 import time
 
 from app.db.session import SessionLocal
+from app.jobs.runtime import run_job_coroutine
 from app.observability.metrics import (
     INGESTION_JOB_DURATION_SECONDS,
     INGESTION_JOBS_IN_PROGRESS,
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def process_ingestion_run_job(run_id: int) -> int:
-    return asyncio.run(_process_ingestion_run_job(run_id))
+    return run_job_coroutine(_process_ingestion_run_job(run_id))
 
 
 async def _process_ingestion_run_job(run_id: int) -> int:
