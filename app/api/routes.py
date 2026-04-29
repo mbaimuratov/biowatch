@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -7,11 +8,13 @@ from app.core.config import get_settings
 from app.db.session import get_session
 from app.jobs.ingestion import process_ingestion_run_job
 from app.jobs.queues import get_ingestion_queue
+from app.schemas.digests import DigestRead
 from app.schemas.ingestion_runs import IngestionRunRead
 from app.schemas.papers import PaperRead
 from app.schemas.subscriptions import SubscriptionIngestDueRead
 from app.schemas.topics import TopicCreate, TopicRead
 from app.search.client import PaperSearchClient, SearchError
+from app.services import digests as digest_service
 from app.services import ingestion as ingestion_service
 from app.services import papers as paper_service
 from app.services import subscriptions as subscription_service
@@ -141,6 +144,35 @@ async def list_topic_papers(
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
     return await paper_service.list_papers_for_topic(session, topic_id)
+
+
+@router.post(
+    "/digests/today/generate",
+    response_model=DigestRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["digests"],
+)
+async def generate_today_digest(session: SessionDep) -> DigestRead:
+    return await digest_service.generate_today_digest(session)
+
+
+@router.get("/digests/today", response_model=DigestRead, tags=["digests"])
+async def get_today_digest(session: SessionDep) -> DigestRead:
+    digest = await digest_service.get_today_digest(session)
+    if digest is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Digest not found")
+    return digest
+
+
+@router.get("/digests/{digest_date}", response_model=DigestRead, tags=["digests"])
+async def get_digest(
+    digest_date: date,
+    session: SessionDep,
+) -> DigestRead:
+    digest = await digest_service.get_digest_by_date(session, digest_date)
+    if digest is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Digest not found")
+    return digest
 
 
 @router.get("/papers/search", response_model=list[PaperRead], tags=["papers"])
