@@ -150,9 +150,12 @@ async def dashboard_ingest_topic(
     if topic is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found")
 
-    run = await ingestion_service.create_queued_run(session, topic)
-    job = ingestion_queue.enqueue(process_ingestion_run_job, run.id)
-    run = await ingestion_service.mark_run_enqueued(session, run, job.id)
+    run = await ingestion_service.enqueue_topic_ingestion(
+        session,
+        topic,
+        ingestion_queue,
+        process_ingestion_run_job,
+    )
 
     if request.headers.get("HX-Request") == "true":
         return templates.TemplateResponse(
