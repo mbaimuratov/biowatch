@@ -21,18 +21,54 @@ class TelegramIdentity:
     first_name: str | None = None
 
 
-HELP_TEXT = """BioWatch commands:
-/start - register this chat
+BOT_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("start", "Register this chat and see onboarding"),
+    ("help", "Show commands and examples"),
+    ("settings", "Show reading settings"),
+    ("topics", "List enabled topics"),
+    ("addtopic", "Add a topic using Name | query"),
+    ("removetopic", "Disable one of your topics"),
+    ("pause", "Pause morning briefs"),
+    ("resume", "Resume morning briefs"),
+    ("count", "Set papers per morning brief"),
+    ("time", "Set morning send time"),
+    ("timezone", "Set timezone"),
+    ("digest", "Send a digest now"),
+)
+
+SUGGESTED_COMMANDS: tuple[tuple[str, ...], ...] = (
+    ("/digest", "/topics"),
+    ("/settings", "/help"),
+    ("/addtopic Spatial transcriptomics | spatial transcriptomics tumor microenvironment cancer",),
+    ("/addtopic Checkpoint inhibitors | cancer immunotherapy checkpoint inhibitor",),
+    ("/count 5", "/time 08:30"),
+    ("/timezone Europe/Rome", "/pause"),
+)
+
+HELP_TEXT = """BioWatch command guide
+
+Core workflow:
+1. Add one or more research topics.
+2. BioWatch ingests papers for those topics.
+3. Use /digest to read recent matches for this chat.
+4. Tune count, time, and timezone for future morning briefs.
+
+Commands:
 /settings - show your settings
 /topics - list your enabled topics
 /addtopic Name | Europe PMC query
 /removetopic 3 - disable a topic
-/count 5 - set morning article count
+/count 5 - send up to 5 papers
 /time 08:30 - set morning send time
 /timezone Europe/Rome - set timezone
 /pause - pause morning briefs
 /resume - resume morning briefs
-/digest - send a digest now"""
+/digest - send a digest now
+
+Good topic examples:
+/addtopic Spatial transcriptomics | spatial transcriptomics tumor microenvironment cancer
+/addtopic Checkpoint inhibitors | cancer immunotherapy checkpoint inhibitor
+/addtopic Liquid biopsy | circulating tumor DNA minimal residual disease"""
 
 
 async def start(session: AsyncSession, identity: TelegramIdentity) -> str:
@@ -40,8 +76,18 @@ async def start(session: AsyncSession, identity: TelegramIdentity) -> str:
     name = subscriber.first_name or subscriber.username or "there"
     return (
         f"Hi {name}. BioWatch is ready.\n\n"
-        "Add your first topic with:\n"
-        "/addtopic Spatial transcriptomics | spatial transcriptomics tumor microenvironment cancer"
+        "BioWatch is a Telegram-first biomedical reading bot. It watches your research "
+        "topics, stores matching papers from biomedical literature sources, and can send "
+        "a short reading brief for this chat.\n\n"
+        "Start here:\n"
+        "1. Add a topic with /addtopic Name | search query\n"
+        "2. Check topics with /topics\n"
+        "3. Ask for recent matches with /digest\n"
+        "4. Tune delivery with /count 5, /time 08:30, and /timezone Europe/Rome\n\n"
+        "Example:\n"
+        "/addtopic Spatial transcriptomics | "
+        "spatial transcriptomics tumor microenvironment cancer\n\n"
+        "Use /help any time to see all commands and examples."
     )
 
 

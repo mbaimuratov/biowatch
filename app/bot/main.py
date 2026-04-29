@@ -1,8 +1,10 @@
 import logging
 
+from telegram import BotCommand
 from telegram.ext import Application, CommandHandler
 
 from app.bot import handlers
+from app.bot import service as bot_service
 from app.core.config import get_settings
 from app.observability.logging import configure_logging
 
@@ -10,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def build_application(token: str) -> Application:
-    application = Application.builder().token(token).build()
+    application = Application.builder().token(token).post_init(set_bot_commands).build()
     application.add_handler(CommandHandler("start", handlers.start))
     application.add_handler(CommandHandler("help", handlers.help_command))
     application.add_handler(CommandHandler("settings", handlers.settings))
@@ -24,6 +26,12 @@ def build_application(token: str) -> Application:
     application.add_handler(CommandHandler("timezone", handlers.timezone))
     application.add_handler(CommandHandler("digest", handlers.digest))
     return application
+
+
+async def set_bot_commands(application: Application) -> None:
+    await application.bot.set_my_commands(
+        [BotCommand(command, description) for command, description in bot_service.BOT_COMMANDS]
+    )
 
 
 def main() -> None:
