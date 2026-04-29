@@ -56,3 +56,25 @@ DIGEST_GENERATION_DURATION_SECONDS = Histogram(
     "Digest generation duration in seconds.",
     ("status",),
 )
+
+TELEGRAM_DELIVERY_ATTEMPTS_TOTAL = Counter(
+    "biowatch_telegram_delivery_attempts_total",
+    "Total Telegram digest delivery attempts by status.",
+    ("status",),
+)
+
+TELEGRAM_DELIVERY_DURATION_SECONDS = Histogram(
+    "biowatch_telegram_delivery_duration_seconds",
+    "Telegram digest delivery duration in seconds.",
+    ("status",),
+)
+
+TELEGRAM_DELIVERY_ITEMS_SENT_TOTAL = Counter(
+    "biowatch_telegram_delivery_items_sent_total",
+    "Total Telegram digest delivery items sent.",
+)
+
+TELEGRAM_DELIVERIES_IN_PROGRESS = Gauge(
+    "biowatch_telegram_deliveries_in_progress",
+    "Current Telegram digest deliveries being processed by this worker.",
+)
