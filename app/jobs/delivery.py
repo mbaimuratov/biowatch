@@ -1,10 +1,10 @@
-import asyncio
 import logging
 import time
 
 from app.bot.sender import TelegramBotSender
 from app.core.config import get_settings
 from app.db.session import SessionLocal
+from app.jobs.runtime import run_job_coroutine
 from app.models import TelegramDigestDelivery
 from app.observability.metrics import (
     TELEGRAM_DELIVERIES_IN_PROGRESS,
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def process_morning_delivery_job(delivery_id: int) -> int:
-    return asyncio.run(_process_morning_delivery_job(delivery_id))
+    return run_job_coroutine(_process_morning_delivery_job(delivery_id))
 
 
 async def _process_morning_delivery_job(delivery_id: int) -> int:
@@ -29,7 +29,7 @@ async def _process_morning_delivery_job(delivery_id: int) -> int:
     TELEGRAM_DELIVERIES_IN_PROGRESS.inc()
     async with SessionLocal() as session:
         try:
-            sender = TelegramBotSender(get_settings().telegram_bot_token)
+            sender = _build_sender()
             delivery = await process_morning_delivery(session, delivery_id, sender)
             status = delivery.status
             item_count = len(delivery.items) if "items" in delivery.__dict__ else 0
@@ -61,3 +61,7 @@ async def _process_morning_delivery_job(delivery_id: int) -> int:
                     "duration_seconds": round(duration, 6),
                 },
             )
+
+
+def _build_sender() -> TelegramBotSender:
+    return TelegramBotSender(get_settings().telegram_bot_token)
