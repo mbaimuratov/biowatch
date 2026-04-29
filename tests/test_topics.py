@@ -18,13 +18,15 @@ def test_create_get_and_list_topics(client: TestClient) -> None:
     assert create_response.status_code == 201
     created_topic = create_response.json()
     assert created_topic["id"] == 1
+    assert created_topic["subscriber_id"] is None
     assert created_topic["name"] == "Checkpoint inhibitors"
     assert created_topic["query"] == "cancer immunotherapy checkpoint inhibitor"
     assert created_topic["enabled"] is True
     assert created_topic["ingestion_frequency"] == "daily"
     assert created_topic["last_ingested_at"] is None
     assert created_topic["last_successful_ingestion_at"] is None
-    assert created_topic["max_results_per_run"] == 25
+    assert created_topic["priority"] == 0
+    assert created_topic["max_papers_per_run"] == 25
     assert created_topic["created_at"]
 
     get_response = client.get("/topics/1")
@@ -57,14 +59,29 @@ def test_create_topic_accepts_scheduling_settings(client: TestClient) -> None:
             "name": "Checkpoint inhibitors",
             "query": "cancer immunotherapy checkpoint inhibitor",
             "ingestion_frequency": "weekly",
-            "max_results_per_run": 10,
+            "priority": 5,
+            "max_papers_per_run": 10,
         },
     )
 
     assert response.status_code == 201
     topic = response.json()
     assert topic["ingestion_frequency"] == "weekly"
-    assert topic["max_results_per_run"] == 10
+    assert topic["priority"] == 5
+    assert topic["max_papers_per_run"] == 10
+
+
+def test_create_topic_rejects_old_max_results_field(client: TestClient) -> None:
+    response = client.post(
+        "/topics",
+        json={
+            "name": "Checkpoint inhibitors",
+            "query": "cancer immunotherapy checkpoint inhibitor",
+            "max_results_per_run": 10,
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_create_topic_rejects_unknown_ingestion_frequency(client: TestClient) -> None:

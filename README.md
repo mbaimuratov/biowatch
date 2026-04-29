@@ -4,10 +4,13 @@ BioWatch is a biomedical literature watcher for tracking user-defined research t
 ingesting new biomedical papers from Europe PMC and PubMed, indexing them, and showing
 searchable alerts.
 
-This repository contains the first backend MVP. It uses FastAPI, Jinja2, HTMX,
-PostgreSQL, Redis, RQ, Elasticsearch, SQLAlchemy, Alembic, pytest, and ruff.
-Europe PMC is the primary literature source; NCBI PubMed E-utilities is reserved
-as an optional secondary source.
+BioWatch is moving toward a Telegram-first biomedical reading bot. Every
+morning the bot will send a configurable set of papers from subscribed topics;
+the web dashboard remains useful for admin and debugging workflows.
+
+The backend uses FastAPI, Jinja2, HTMX, PostgreSQL, Redis, RQ, Elasticsearch,
+SQLAlchemy, Alembic, pytest, and ruff. Europe PMC is the primary literature
+source; NCBI PubMed E-utilities is reserved as an optional secondary source.
 Manual topic ingestion enqueues an RQ job that fetches one page of the newest
 matching Europe PMC records.
 
@@ -96,6 +99,18 @@ Create a new Alembic migration:
 ```sh
 make db-revision m="describe change"
 ```
+
+## Telegram Subscription Model
+
+BioWatch stores Telegram subscribers and per-subscriber topic ownership so the
+future bot service can manage reading preferences without web authentication.
+Subscriber settings include timezone, morning send time, article count, and
+enabled status. Existing global topics are still supported with no subscriber
+attached, which keeps the API and dashboard useful as admin/debug surfaces.
+
+Telegram long polling, bot commands, Telegram tokens, message sending,
+webhooks, delivery runs, and Kubernetes CronJobs are intentionally not included
+yet. Those come in later Telegram phases.
 
 ## MVP API
 
