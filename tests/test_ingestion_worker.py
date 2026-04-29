@@ -166,7 +166,7 @@ async def _create_queued_run(async_session_factory) -> int:
         topic = Topic(
             name="Alzheimer biomarkers",
             query="alzheimer biomarker plasma",
-            max_results_per_run=7,
+            max_papers_per_run=7,
         )
         session.add(topic)
         await session.commit()

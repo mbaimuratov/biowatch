@@ -91,7 +91,7 @@ async def process_ingestion_run(
     await session.commit()
 
     try:
-        search_response = await client.search(topic.query, page_size=topic.max_results_per_run)
+        search_response = await client.search(topic.query, page_size=topic.max_papers_per_run)
         payloads = _normalize_search_response(search_response)
         for payload in payloads:
             paper = await _upsert_paper(session, payload)
