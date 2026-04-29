@@ -409,8 +409,9 @@ credentials such as `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
 ## Kubernetes and Helm
 
 BioWatch includes raw Kubernetes manifests under `infra/k8s` and a Helm chart
-under `infra/helm/biowatch`. The raw manifests are useful for understanding and
-debugging the objects. Helm is the repeatable install and upgrade path.
+under `infra/helm/biowatch`. From now on, Helm on kind is the default local
+runtime path. The raw manifests remain useful for understanding and debugging
+the objects.
 
 Create a local kind cluster with HTTP ingress mapped to `localhost:8080`:
 
@@ -431,18 +432,43 @@ kubectl wait --namespace ingress-nginx \
 Build and load the local BioWatch image:
 
 ```sh
-docker build -t biowatch:dev .
-kind load docker-image biowatch:dev --name biowatch
+docker build -t biowatch:local .
+kind load docker-image biowatch:local --name biowatch
 ```
 
-Validate and apply the raw manifests:
+Create the runtime Secret from local shell values. Do not commit real Telegram
+tokens to git; rotate any token pasted into chat, logs, or source control.
 
 ```sh
-kubectl apply --dry-run=client -f infra/k8s/
-kubectl apply -f infra/k8s/
-kubectl -n biowatch wait --for=condition=complete job/biowatch-migrate --timeout=180s
+export BIOWATCH_TELEGRAM_BOT_TOKEN='set-token-locally'
+kubectl create namespace biowatch --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n biowatch create secret generic biowatch-secret \
+  --from-literal=POSTGRES_PASSWORD=biowatch \
+  --from-literal=BIOWATCH_DATABASE_URL='postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch' \
+  --from-literal=BIOWATCH_TELEGRAM_BOT_TOKEN="$BIOWATCH_TELEGRAM_BOT_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Install with Helm:
+
+```sh
+helm lint infra/helm/biowatch -f infra/helm/biowatch/values-dev.yaml
+helm template biowatch infra/helm/biowatch \
+  --namespace biowatch \
+  -f infra/helm/biowatch/values-dev.yaml \
+  --set image.repository=biowatch \
+  --set image.tag=local \
+  --set image.pullPolicy=Never
+helm upgrade --install biowatch infra/helm/biowatch \
+  --namespace biowatch \
+  -f infra/helm/biowatch/values-dev.yaml \
+  --set image.repository=biowatch \
+  --set image.tag=local \
+  --set image.pullPolicy=Never
 kubectl -n biowatch rollout status deploy/biowatch-api
 kubectl -n biowatch rollout status deploy/biowatch-worker
+kubectl -n biowatch rollout status deploy/biowatch-bot
+kubectl -n biowatch rollout status deploy/biowatch-scheduler
 ```
 
 Reach the API through port-forward:
@@ -469,19 +495,22 @@ kubectl -n biowatch logs deploy/biowatch-worker -f
 curl http://127.0.0.1:8000/ingestion-runs
 ```
 
-Install with Helm instead of raw manifests:
+Check Telegram runtime pods and Secret injection:
 
 ```sh
-helm lint infra/helm/biowatch -f infra/helm/biowatch/values-dev.yaml
-helm template biowatch infra/helm/biowatch \
-  --namespace biowatch \
-  -f infra/helm/biowatch/values-dev.yaml
-helm install biowatch infra/helm/biowatch \
-  --namespace biowatch \
-  --create-namespace \
-  -f infra/helm/biowatch/values-dev.yaml
-kubectl -n biowatch rollout status deploy/biowatch-api
+kubectl -n biowatch logs deploy/biowatch-bot -f
+kubectl -n biowatch logs deploy/biowatch-worker -f
+kubectl -n biowatch logs deploy/biowatch-scheduler -f
+kubectl -n biowatch exec deploy/biowatch-worker -- sh -lc 'test -n "$BIOWATCH_TELEGRAM_BOT_TOKEN" && echo token-present'
 helm test biowatch --namespace biowatch
+```
+
+Validate and apply raw manifests only when you want the reference/debug path:
+
+```sh
+kubectl apply --dry-run=client -f infra/k8s/
+kubectl apply -f infra/k8s/
+kubectl -n biowatch wait --for=condition=complete job/biowatch-migrate --timeout=180s
 ```
 
 Upgrade image tags or config:
