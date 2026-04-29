@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Daily Digest - BioWatch{% endblock %}
+
+{% block content %}
+  <section class="page-heading">
+    <div>
+      <h1>Daily Digest</h1>
+      <p>Recent biomedical papers matched to enabled topics.</p>
+    </div>
+    <form method="post" action="/digest/today/generate">
+      <button type="submit">Generate Today</button>
+    </form>
+  </section>
+
+  {% if digest %}
+    <section>
+      <dl class="grid">
+        <div>
+          <dt>Date</dt>
+          <dd>{{ digest.digest_date.isoformat() }}</dd>
+        </div>
+        <div>
+          <dt>Papers</dt>
+          <dd>{{ digest.paper_count }}</dd>
+        </div>
+        <div>
+          <dt>Generated</dt>
+          <dd>{{ digest.generated_at.isoformat() if digest.generated_at else "Not generated" }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    {% if digest.items %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Paper</th>
+              <th>Journal</th>
+              <th>Published</th>
+              <th>Topic</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in digest.items %}
+              <tr>
+                <td>{{ item.rank }}</td>
+                <td>
+                  {% if item.paper.url %}
+                    <a href="{{ item.paper.url }}" rel="noreferrer">{{ item.paper.title }}</a>
+                  {% else %}
+                    {{ item.paper.title }}
+                  {% endif %}
+                </td>
+                <td>{{ item.paper.journal or "Unknown" }}</td>
+                <td>{{ item.paper.publication_date.isoformat() if item.paper.publication_date else "Unknown" }}</td>
+                <td>{{ item.topic.name }}</td>
+                <td>{{ item.reason or "Matched topic" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">Today’s digest has no matched papers yet.</p>
+    {% endif %}
+  {% else %}
+    <article>
+      <p class="empty">No digest has been generated for today yet.</p>
+      <form method="post" action="/digest/today/generate">
+        <button type="submit">Generate Today’s Digest</button>
+      </form>
+    </article>
+  {% endif %}
+{% endblock %}

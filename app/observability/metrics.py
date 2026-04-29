@@ -39,3 +39,20 @@ INGESTION_JOBS_IN_PROGRESS = Gauge(
     "biowatch_ingestion_jobs_in_progress",
     "Current ingestion jobs being processed by this worker.",
 )
+
+DIGEST_GENERATIONS_TOTAL = Counter(
+    "biowatch_digest_generations_total",
+    "Total digest generation attempts by status.",
+    ("status",),
+)
+
+DIGEST_ITEMS_GENERATED_TOTAL = Counter(
+    "biowatch_digest_items_generated_total",
+    "Total digest items generated.",
+)
+
+DIGEST_GENERATION_DURATION_SECONDS = Histogram(
+    "biowatch_digest_generation_duration_seconds",
+    "Digest generation duration in seconds.",
+    ("status",),
+)

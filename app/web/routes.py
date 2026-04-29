@@ -11,6 +11,7 @@ from app.jobs.ingestion import process_ingestion_run_job
 from app.jobs.queues import get_ingestion_queue
 from app.schemas.topics import TopicCreate
 from app.search.client import PaperSearchClient, SearchError
+from app.services import digests as digest_service
 from app.services import ingestion as ingestion_service
 from app.services import papers as paper_service
 from app.services import topics as topic_service
@@ -187,6 +188,31 @@ async def dashboard_ingestion_runs(
 ) -> HTMLResponse:
     runs = await ingestion_service.list_ingestion_runs(session)
     return templates.TemplateResponse(request, "ingestion_runs.html", {"runs": runs})
+
+
+@router.get("/digest/today", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard_today_digest(
+    request: Request,
+    session: SessionDep,
+    message: str | None = None,
+) -> HTMLResponse:
+    digest = await digest_service.get_today_digest(session)
+    return templates.TemplateResponse(
+        request,
+        "digest_today.html",
+        {"digest": digest, "message": message},
+    )
+
+
+@router.post("/digest/today/generate", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard_generate_today_digest(
+    session: SessionDep,
+) -> Response:
+    await digest_service.generate_today_digest(session)
+    return RedirectResponse(
+        "/digest/today?message=Digest%20generated",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
 
 
 @router.get("/ui/search", response_class=HTMLResponse, include_in_schema=False)

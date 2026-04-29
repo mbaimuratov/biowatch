@@ -107,6 +107,9 @@ GET  /topics/{topic_id}
 DELETE /topics/{topic_id}
 POST /topics/{topic_id}/ingest
 POST /subscriptions/ingest-due
+POST /digests/today/generate
+GET  /digests/today
+GET  /digests/{digest_date}
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
@@ -165,6 +168,33 @@ Search indexed papers:
 curl "http://127.0.0.1:8000/papers/search?q=checkpoint"
 ```
 
+## Daily Digest
+
+BioWatch can generate a persistent daily digest from recently matched papers.
+The digest is stored in Postgres so later scheduled jobs, alerting, and AI
+summaries can build on a durable application artifact.
+
+Generate today's digest:
+
+```sh
+curl -X POST http://127.0.0.1:8000/digests/today/generate
+```
+
+Fetch today's digest:
+
+```sh
+curl http://127.0.0.1:8000/digests/today
+```
+
+Open the digest dashboard:
+
+```text
+http://127.0.0.1:8000/digest/today
+```
+
+Daily Digest v1 intentionally does not include AI summaries, advanced ranking,
+or save/dismiss actions yet. Those come in later phases.
+
 ## Dashboard Flow
 
 Open the dashboard after the API is running:
@@ -178,6 +208,7 @@ From the dashboard you can:
 - create a tracked topic
 - open a topic detail page
 - queue Europe PMC ingestion for that topic
+- generate and view today's digest
 - view recent papers
 - view ingestion run status
 - search indexed papers
