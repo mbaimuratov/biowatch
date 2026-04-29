@@ -17,6 +17,7 @@ class Settings:
     europe_pmc_max_attempts: int = 3
     europe_pmc_retry_backoff_seconds: float = 0.25
     worker_metrics_port: int = 9100
+    scheduler_interval_seconds: int = 60
     telegram_bot_token: str = ""
     pubmed_base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -66,6 +67,12 @@ def get_settings() -> Settings:
         ),
         worker_metrics_port=int(
             getenv("BIOWATCH_WORKER_METRICS_PORT", str(Settings.worker_metrics_port))
+        ),
+        scheduler_interval_seconds=int(
+            getenv(
+                "BIOWATCH_SCHEDULER_INTERVAL_SECONDS",
+                str(Settings.scheduler_interval_seconds),
+            )
         ),
         telegram_bot_token=getenv("BIOWATCH_TELEGRAM_BOT_TOKEN", Settings.telegram_bot_token),
         pubmed_base_url=getenv("BIOWATCH_PUBMED_BASE_URL", Settings.pubmed_base_url),

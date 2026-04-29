@@ -78,6 +78,15 @@ app.kubernetes.io/component: {{ .component }}
       key: BIOWATCH_DATABASE_URL
 {{- end -}}
 
+{{- define "biowatch.telegramTokenEnv" -}}
+- name: BIOWATCH_TELEGRAM_BOT_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "biowatch.secretName" . }}
+      key: BIOWATCH_TELEGRAM_BOT_TOKEN
+      optional: true
+{{- end -}}
+
 {{- define "biowatch.waitForPostgres" -}}
 python - <<'PY'
 import socket

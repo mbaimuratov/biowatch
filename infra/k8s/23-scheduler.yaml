@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biowatch-scheduler
+  namespace: biowatch
+  labels:
+    app.kubernetes.io/name: biowatch
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: biowatch
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: biowatch
+        app.kubernetes.io/component: scheduler
+    spec:
+      serviceAccountName: biowatch-scheduler
+      containers:
+        - name: scheduler
+          image: biowatch:dev
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - app.jobs.scheduler
+          envFrom:
+            - configMapRef:
+                name: biowatch-config
+            - secretRef:
+                name: biowatch-secret
+          env:
+            - name: BIOWATCH_SCHEDULER_INTERVAL_SECONDS
+              value: "60"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi

@@ -17,7 +17,8 @@
         "create": { "type": "boolean" },
         "existingSecret": { "type": "string" },
         "postgresPassword": { "type": "string" },
-        "databaseUrl": { "type": "string" }
+        "databaseUrl": { "type": "string" },
+        "telegramBotToken": { "type": "string" }
       }
     },
     "api": {
@@ -36,6 +37,21 @@
             "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
           }
         }
+      }
+    },
+    "bot": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "scheduler": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "intervalSeconds": { "type": "integer", "minimum": 1 }
       }
     },
     "observability": {
