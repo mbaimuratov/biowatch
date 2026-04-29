@@ -85,10 +85,11 @@ Grafana:        http://127.0.0.1:3000
 make test       # run pytest
 make lint       # run ruff checks
 make format     # format with ruff
-make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, bot, Prometheus, and Grafana
+make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, scheduler, bot, Prometheus, and Grafana
 make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
+make scheduler  # enqueue due Telegram morning deliveries
 make bot        # run the Telegram bot with long polling
 make k8s-dry-run
 make helm-lint
@@ -148,9 +149,46 @@ Supported bot commands:
 The bot can manage topics/settings and send an immediate subscriber-scoped
 digest. `/start` explains the workflow, `/help` includes practical topic
 examples, and the bot registers Telegram command suggestions plus a small reply
-keyboard for common actions. Scheduled morning delivery, webhooks, delivery-run
-tables, Kubernetes CronJobs, and AI summaries are intentionally not included
-yet.
+keyboard for common actions.
+
+### Telegram Morning Delivery
+
+BioWatch can also send a persistent morning brief for each enabled Telegram
+subscriber. The scheduler checks subscriber timezone and `morning_send_time`,
+queues one delivery per subscriber/scheduled morning, and the worker processes
+the delivery. Delivery jobs ingest due subscriber topics, generate/reuse the
+daily digest, select up to `article_count` papers, send Telegram messages, and
+record delivery status/items.
+
+Run the local morning-delivery stack:
+
+```sh
+export BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
+docker compose up --build postgres redis elasticsearch api worker scheduler bot
+docker compose exec api alembic upgrade head
+```
+
+For non-Docker local development, run the API, worker, scheduler, and bot in
+separate terminals:
+
+```sh
+make run
+make worker
+make scheduler
+make bot
+```
+
+Inspect and retry deliveries through the admin/debug API:
+
+```sh
+curl http://127.0.0.1:8000/telegram/deliveries
+curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/retry
+```
+
+Automatic delivery is idempotent for a subscriber and scheduled morning. Failed
+deliveries are not retried automatically; use the retry endpoint after
+inspecting the failure. Webhooks, Kubernetes CronJobs, delivery AI summaries,
+and advanced notification controls are intentionally not included yet.
 
 ## MVP API
 
@@ -165,6 +203,8 @@ POST /subscriptions/ingest-due
 POST /digests/today/generate
 GET  /digests/today
 GET  /digests/{digest_date}
+GET  /telegram/deliveries
+POST /telegram/deliveries/{delivery_id}/retry
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
@@ -315,6 +355,8 @@ sum(rate(biowatch_api_request_errors_total[5m]))
 histogram_quantile(0.95, sum(rate(biowatch_api_request_latency_seconds_bucket[5m])) by (le, path))
 increase(biowatch_ingestion_jobs_total[1h])
 increase(biowatch_ingestion_records_fetched_total[1h])
+increase(biowatch_telegram_delivery_attempts_total[1h])
+increase(biowatch_telegram_delivery_items_sent_total[1h])
 ```
 
 For Kubernetes, raw manifests add Prometheus scrape annotations to API and

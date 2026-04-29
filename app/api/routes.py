@@ -6,23 +6,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_session
+from app.jobs.delivery import process_morning_delivery_job
 from app.jobs.ingestion import process_ingestion_run_job
-from app.jobs.queues import get_ingestion_queue
+from app.jobs.queues import get_delivery_queue, get_ingestion_queue
 from app.schemas.digests import DigestRead
 from app.schemas.ingestion_runs import IngestionRunRead
 from app.schemas.papers import PaperRead
 from app.schemas.subscriptions import SubscriptionIngestDueRead
+from app.schemas.telegram_deliveries import TelegramDigestDeliveryRead
 from app.schemas.topics import TopicCreate, TopicRead
 from app.search.client import PaperSearchClient, SearchError
 from app.services import digests as digest_service
 from app.services import ingestion as ingestion_service
 from app.services import papers as paper_service
 from app.services import subscriptions as subscription_service
+from app.services import telegram_deliveries as delivery_service
 from app.services import topics as topic_service
 
 router = APIRouter()
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 IngestionQueueDep = Annotated[object, Depends(get_ingestion_queue)]
+DeliveryQueueDep = Annotated[object, Depends(get_delivery_queue)]
 
 
 def get_paper_search_client() -> PaperSearchClient:
@@ -179,6 +183,47 @@ async def get_digest(
     if digest is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Digest not found")
     return digest
+
+
+@router.get(
+    "/telegram/deliveries",
+    response_model=list[TelegramDigestDeliveryRead],
+    tags=["telegram"],
+)
+async def list_telegram_deliveries(
+    session: SessionDep,
+) -> list[TelegramDigestDeliveryRead]:
+    return await delivery_service.list_deliveries(session)
+
+
+@router.post(
+    "/telegram/deliveries/{delivery_id}/retry",
+    response_model=TelegramDigestDeliveryRead,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["telegram"],
+)
+async def retry_telegram_delivery(
+    delivery_id: int,
+    session: SessionDep,
+    delivery_queue: DeliveryQueueDep,
+) -> TelegramDigestDeliveryRead:
+    try:
+        return await delivery_service.retry_failed_delivery(
+            session,
+            delivery_id,
+            delivery_queue,
+            process_morning_delivery_job,
+        )
+    except delivery_service.DeliveryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Telegram delivery not found",
+        ) from exc
+    except delivery_service.DeliveryRetryNotAllowedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only failed Telegram deliveries can be retried",
+        ) from exc
 
 
 @router.get("/papers/search", response_model=list[PaperRead], tags=["papers"])

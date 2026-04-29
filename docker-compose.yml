@@ -13,6 +13,7 @@ services:
       BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS: 3
       BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS: 0.25
       BIOWATCH_WORKER_METRICS_PORT: 9100
+      BIOWATCH_TELEGRAM_BOT_TOKEN: ${BIOWATCH_TELEGRAM_BOT_TOKEN:-}
     ports:
       - "8000:8000"
     volumes:
@@ -49,6 +50,24 @@ services:
       redis:
         condition: service_healthy
       elasticsearch:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    command: python -m app.jobs.scheduler
+    environment:
+      BIOWATCH_ENVIRONMENT: local
+      BIOWATCH_DATABASE_URL: postgresql+asyncpg://biowatch:biowatch@postgres:5432/biowatch
+      BIOWATCH_REDIS_URL: redis://redis:6379/0
+      BIOWATCH_ELASTICSEARCH_URL: http://elasticsearch:9200
+      BIOWATCH_ELASTICSEARCH_INDEX: biowatch-papers
+      BIOWATCH_SCHEDULER_INTERVAL_SECONDS: ${BIOWATCH_SCHEDULER_INTERVAL_SECONDS:-60}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   bot:
