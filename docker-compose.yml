@@ -51,6 +51,24 @@ services:
       elasticsearch:
         condition: service_healthy
 
+  bot:
+    build: .
+    command: python -m app.bot.main
+    environment:
+      BIOWATCH_ENVIRONMENT: local
+      BIOWATCH_DATABASE_URL: postgresql+asyncpg://biowatch:biowatch@postgres:5432/biowatch
+      BIOWATCH_REDIS_URL: redis://redis:6379/0
+      BIOWATCH_ELASTICSEARCH_URL: http://elasticsearch:9200
+      BIOWATCH_ELASTICSEARCH_INDEX: biowatch-papers
+      BIOWATCH_TELEGRAM_BOT_TOKEN: ${BIOWATCH_TELEGRAM_BOT_TOKEN:-}
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     environment:
