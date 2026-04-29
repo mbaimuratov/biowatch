@@ -111,6 +111,8 @@ def test_bot_service_manages_subscriber_settings_and_topics(async_session_factor
     result = asyncio.run(scenario())
 
     assert "BioWatch is ready" in result["start"]
+    assert "Telegram-first biomedical reading bot" in result["start"]
+    assert "/addtopic Spatial transcriptomics" in result["start"]
     assert result["count"] == "Morning article count set to 5."
     assert result["time"] == "Morning send time set to 08:30."
     assert result["timezone"] == "Timezone set to Europe/Rome."
@@ -232,7 +234,19 @@ def test_handler_replies_without_calling_telegram_api(async_session_factory, mon
 
     asyncio.run(handlers.addtopic(update, context))
 
-    assert update.message.replies == [("Added topic 1: Biomarkers", True)]
+    assert update.message.replies[0]["text"] == "Added topic 1: Biomarkers"
+    assert update.message.replies[0]["disable_web_page_preview"] is True
+    keyboard = update.message.replies[0]["reply_markup"]
+    assert keyboard.keyboard[0][0].text == "/digest"
+    assert keyboard.keyboard[2][0].text.startswith("/addtopic Spatial transcriptomics")
+
+
+def test_help_text_includes_plain_examples() -> None:
+    assert "Core workflow" in bot_service.HELP_TEXT
+    assert "/addtopic Liquid biopsy | circulating tumor DNA minimal residual disease" in (
+        bot_service.HELP_TEXT
+    )
+    assert ("digest", "Send a digest now") in bot_service.BOT_COMMANDS
 
 
 class FakeChat:
@@ -248,10 +262,21 @@ class FakeUser:
 class FakeMessage:
     def __init__(self, text: str) -> None:
         self.text = text
-        self.replies: list[tuple[str, bool]] = []
+        self.replies: list[dict[str, object]] = []
 
-    async def reply_text(self, text: str, disable_web_page_preview: bool = False) -> None:
-        self.replies.append((text, disable_web_page_preview))
+    async def reply_text(
+        self,
+        text: str,
+        disable_web_page_preview: bool = False,
+        reply_markup: object | None = None,
+    ) -> None:
+        self.replies.append(
+            {
+                "text": text,
+                "disable_web_page_preview": disable_web_page_preview,
+                "reply_markup": reply_markup,
+            }
+        )
 
 
 class FakeUpdate:

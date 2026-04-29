@@ -146,8 +146,11 @@ Supported bot commands:
 ```
 
 The bot can manage topics/settings and send an immediate subscriber-scoped
-digest. Scheduled morning delivery, webhooks, delivery-run tables, Kubernetes
-CronJobs, and AI summaries are intentionally not included yet.
+digest. `/start` explains the workflow, `/help` includes practical topic
+examples, and the bot registers Telegram command suggestions plus a small reply
+keyboard for common actions. Scheduled morning delivery, webhooks, delivery-run
+tables, Kubernetes CronJobs, and AI summaries are intentionally not included
+yet.
 
 ## MVP API
 
