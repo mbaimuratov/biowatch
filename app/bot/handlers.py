@@ -1,6 +1,6 @@
 from collections.abc import Awaitable, Callable
 
-from telegram import Update
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from app.bot import service as bot_service
@@ -108,4 +108,16 @@ def _args_text(context: ContextTypes.DEFAULT_TYPE) -> str:
 async def _reply(update: Update, text: str) -> None:
     if update.message is None:
         return
-    await update.message.reply_text(text, disable_web_page_preview=True)
+    await update.message.reply_text(
+        text,
+        disable_web_page_preview=True,
+        reply_markup=_suggestion_keyboard(),
+    )
+
+
+def _suggestion_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [list(row) for row in bot_service.SUGGESTED_COMMANDS],
+        resize_keyboard=True,
+        input_field_placeholder="Choose a BioWatch command or type a topic",
+    )
