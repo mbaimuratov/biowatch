@@ -2,7 +2,7 @@ PYTHON ?= python3.12
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: install run worker test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template
+.PHONY: install run worker bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template
 
 install:
 	$(PYTHON) -m venv $(VENV)
@@ -15,6 +15,9 @@ run:
 worker:
 	$(BIN)/python -m app.jobs.worker
 
+bot:
+	$(BIN)/python -m app.bot.main
+
 test:
 	$(BIN)/pytest
 
@@ -25,7 +28,7 @@ format:
 	$(BIN)/ruff format .
 
 compose-up:
-	docker compose up -d postgres redis elasticsearch api worker prometheus grafana
+	docker compose up -d postgres redis elasticsearch api worker bot prometheus grafana
 
 compose-down:
 	docker compose down
