@@ -1,0 +1,33 @@
+{{- if .Values.scheduler.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biowatch.fullname" . }}-scheduler
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "scheduler") | nindent 4 }}
+spec:
+  replicas: {{ .Values.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "scheduler") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "scheduler") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "scheduler") }}
+      containers:
+        - name: scheduler
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.jobs.scheduler
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+            - name: BIOWATCH_SCHEDULER_INTERVAL_SECONDS
+              value: {{ .Values.scheduler.intervalSeconds | quote }}
+          resources:
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}
+{{- end }}

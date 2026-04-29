@@ -1,0 +1,32 @@
+{{- if .Values.bot.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biowatch.fullname" . }}-bot
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "bot") | nindent 4 }}
+spec:
+  replicas: {{ .Values.bot.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "bot") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "bot") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "bot") }}
+      containers:
+        - name: bot
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.bot.main
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+            {{- include "biowatch.telegramTokenEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.bot.resources | nindent 12 }}
+{{- end }}

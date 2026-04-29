@@ -51,5 +51,6 @@ spec:
               containerPort: {{ .Values.worker.metrics.port }}
           env:
             {{- include "biowatch.appEnv" . | nindent 12 }}
+            {{- include "biowatch.telegramTokenEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}

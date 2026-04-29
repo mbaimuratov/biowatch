@@ -94,6 +94,8 @@ spec:
         values:
           - api
           - worker
+          - bot
+          - scheduler
           - migration
   policyTypes:
     - Egress

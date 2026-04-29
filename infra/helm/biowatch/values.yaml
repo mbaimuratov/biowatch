@@ -24,6 +24,7 @@ secret:
   existingSecret: biowatch-secret
   postgresPassword: ""
   databaseUrl: ""
+  telegramBotToken: ""
 
 serviceAccount:
   create: true
@@ -65,6 +66,29 @@ worker:
     limits:
       cpu: 500m
       memory: 512Mi
+
+bot:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+scheduler:
+  enabled: true
+  replicaCount: 1
+  intervalSeconds: 60
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
 
 migration:
   enabled: true
