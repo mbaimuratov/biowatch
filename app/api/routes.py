@@ -52,7 +52,13 @@ async def create_topic(
     data: TopicCreate,
     session: SessionDep,
 ) -> TopicRead:
-    return await topic_service.create_topic(session, data)
+    try:
+        return await topic_service.create_topic(session, data)
+    except topic_service.TopicSubscriberNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Telegram subscriber not found",
+        ) from exc
 
 
 @router.get("/topics", response_model=list[TopicRead], tags=["topics"])
