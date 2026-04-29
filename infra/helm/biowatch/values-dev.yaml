@@ -1,7 +1,6 @@
 secret:
-  create: true
-  postgresPassword: biowatch
-  databaseUrl: postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch
+  create: false
+  existingSecret: biowatch-secret
 
 ingress:
   enabled: true
