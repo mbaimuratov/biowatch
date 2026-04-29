@@ -11,12 +11,14 @@ from app.jobs import delivery as delivery_job
 from app.jobs.queues import get_delivery_queue
 from app.models import (
     Paper,
+    PaperSummary,
     TelegramDigestDelivery,
     TelegramDigestDeliveryItem,
     TelegramSubscriber,
     Topic,
     TopicPaper,
 )
+from app.services import summaries as summary_service
 from app.services import telegram_deliveries as delivery_service
 
 NOW = datetime(2026, 4, 29, 6, 30, tzinfo=UTC)
@@ -77,6 +79,15 @@ class FakeSearchClient:
 
     async def index_papers(self, papers: list[Paper]) -> None:
         self.indexed.append(papers)
+
+
+class FakeSummaryQueue:
+    def __init__(self) -> None:
+        self.enqueued: list[tuple[object, tuple]] = []
+
+    def enqueue(self, func, *args):
+        self.enqueued.append((func, args))
+        return FakeJob(f"summary-job-{len(self.enqueued)}")
 
 
 def test_delivery_tables_persist_items_and_enforce_idempotency(async_session_factory) -> None:
@@ -277,6 +288,138 @@ def test_failed_telegram_send_marks_delivery_failed(async_session_factory) -> No
     assert "telegram unavailable" in result["error"]
 
 
+def test_delivery_enqueues_summaries_only_for_selected_items_and_falls_back(
+    async_session_factory,
+) -> None:
+    async def scenario() -> dict[str, object]:
+        sender = FakeSender()
+        summary_queue = FakeSummaryQueue()
+        async with async_session_factory() as session:
+            subscriber = TelegramSubscriber(telegram_chat_id=42, article_count=1)
+            high = Topic(
+                name="Spatial",
+                query="spatial",
+                subscriber=subscriber,
+                priority=10,
+                last_ingested_at=NOW,
+            )
+            low = Topic(
+                name="Checkpoint",
+                query="checkpoint",
+                subscriber=subscriber,
+                priority=0,
+                last_ingested_at=NOW,
+            )
+            paper_high = Paper(
+                source="europe_pmc",
+                source_id="MED:1",
+                title="Spatial paper",
+                abstract="Spatial abstract",
+                publication_date=date(2026, 4, 29),
+            )
+            paper_low = Paper(
+                source="europe_pmc",
+                source_id="MED:2",
+                title="Checkpoint paper",
+                abstract="Checkpoint abstract",
+                publication_date=date(2026, 4, 28),
+            )
+            session.add_all([subscriber, high, low, paper_high, paper_low])
+            await session.flush()
+            session.add_all(
+                [
+                    TopicPaper(topic_id=high.id, paper_id=paper_high.id, matched_at=NOW),
+                    TopicPaper(topic_id=low.id, paper_id=paper_low.id, matched_at=NOW),
+                ]
+            )
+            delivery = await delivery_service.create_queued_delivery(
+                session,
+                subscriber,
+                delivery_service.scheduled_for_subscriber(subscriber, NOW),
+            )
+
+            processed = await delivery_service.process_morning_delivery(
+                session,
+                delivery.id,
+                sender,
+                summary_queue=summary_queue,
+                summary_job_func=lambda summary_id: summary_id,
+                summary_wait_timeout_seconds=0,
+                now=NOW,
+            )
+            summaries = list(await session.scalars(select(PaperSummary)))
+            return {
+                "status": processed.status,
+                "delivery_items": len(processed.items),
+                "summary_jobs": len(summary_queue.enqueued),
+                "summary_paper_ids": [summary.paper_id for summary in summaries],
+                "message": sender.messages[0][1],
+            }
+
+    result = asyncio.run(scenario())
+    assert result["status"] == "sent"
+    assert result["delivery_items"] == 1
+    assert result["summary_jobs"] == 1
+    assert result["summary_paper_ids"] == [1]
+    assert "AI summary:" not in result["message"]
+    assert "Topic: Spatial" in result["message"]
+
+
+def test_delivery_renders_cached_ai_summary(async_session_factory) -> None:
+    async def scenario() -> str:
+        sender = FakeSender()
+        async with async_session_factory() as session:
+            subscriber = TelegramSubscriber(telegram_chat_id=42, article_count=1)
+            topic = Topic(
+                name="Spatial",
+                query="spatial",
+                subscriber=subscriber,
+                last_ingested_at=NOW,
+            )
+            paper = Paper(
+                source="europe_pmc",
+                source_id="MED:1",
+                title="Spatial paper",
+                abstract="Spatial transcriptomics abstract",
+                publication_date=date(2026, 4, 29),
+            )
+            session.add_all([subscriber, topic, paper])
+            await session.flush()
+            session.add(TopicPaper(topic_id=topic.id, paper_id=paper.id, matched_at=NOW))
+            session.add(
+                PaperSummary(
+                    paper_id=paper.id,
+                    model="gpt-5-mini",
+                    prompt_version="v1",
+                    input_hash=summary_service.paper_summary_input_hash(paper),
+                    summary_short="This paper maps spatial signals in tumors.",
+                    key_points=["Profiles tumor regions", "Links context to biology"],
+                    limitations="Abstract-only summary.",
+                    why_it_matters="It helps prioritize spatial oncology reading.",
+                    status="completed",
+                )
+            )
+            delivery = await delivery_service.create_queued_delivery(
+                session,
+                subscriber,
+                delivery_service.scheduled_for_subscriber(subscriber, NOW),
+            )
+
+            await delivery_service.process_morning_delivery(
+                session,
+                delivery.id,
+                sender,
+                now=NOW,
+            )
+            return sender.messages[0][1]
+
+    message = asyncio.run(scenario())
+    assert "AI summary:" in message
+    assert "This paper maps spatial signals in tumors." in message
+    assert "- Profiles tumor regions" in message
+    assert "Why it matters:" in message
+
+
 def test_render_morning_brief_splits_long_messages() -> None:
     subscriber = TelegramSubscriber(telegram_chat_id=1)
     topic = Topic(id=1, name="Long Topic", query="long")
@@ -342,7 +485,7 @@ def test_retry_failed_delivery_api_requeues_existing_delivery(
 
 
 def test_delivery_job_records_success_metrics(async_session_factory, monkeypatch) -> None:
-    async def fake_process(session, delivery_id, sender):
+    async def fake_process(session, delivery_id, sender, **kwargs):
         delivery = TelegramDigestDelivery(
             id=delivery_id,
             subscriber_id=123,

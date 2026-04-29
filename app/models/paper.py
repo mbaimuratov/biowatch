@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.paper_summary import PaperSummary
     from app.models.topic import Topic
 
 
@@ -36,6 +37,10 @@ class Paper(Base):
     )
 
     topics: Mapped[list[TopicPaper]] = relationship(
+        back_populates="paper",
+        cascade="all, delete-orphan",
+    )
+    summaries: Mapped[list[PaperSummary]] = relationship(
         back_populates="paper",
         cascade="all, delete-orphan",
     )

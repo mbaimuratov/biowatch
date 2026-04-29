@@ -85,10 +85,11 @@ Grafana:        http://127.0.0.1:3000
 make test       # run pytest
 make lint       # run ruff checks
 make format     # format with ruff
-make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, scheduler, bot, Prometheus, and Grafana
+make compose-up # start PostgreSQL, Redis, Elasticsearch, API, workers, scheduler, bot, Prometheus, and Grafana
 make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
+make summary-worker # run the AI summary worker
 make scheduler  # enqueue due Telegram morning deliveries
 make bot        # run the Telegram bot with long polling
 make k8s-dry-run
@@ -157,14 +158,28 @@ BioWatch can also send a persistent morning brief for each enabled Telegram
 subscriber. The scheduler checks subscriber timezone and `morning_send_time`,
 queues one delivery per subscriber/scheduled morning, and the worker processes
 the delivery. Delivery jobs ingest due subscriber topics, generate/reuse the
-daily digest, select up to `article_count` papers, send Telegram messages, and
-record delivery status/items.
+daily digest, select up to `article_count` papers, enqueue missing AI summaries,
+wait briefly for completed summaries, send Telegram messages, and record
+delivery status/items. If OpenAI is unavailable or summaries time out, the
+brief still sends with the existing title/topic/reason fallback.
+
+AI summaries are generated only for papers selected for the morning brief. They
+use paper title and abstract only; BioWatch does not parse PDFs, use RAG, inspect
+citation graphs, or use semantic search for summaries in this phase. Configure
+OpenAI with local environment variables and do not commit API keys:
+
+```sh
+export BIOWATCH_LLM_API_KEY='set-openai-key-locally'
+export BIOWATCH_LLM_MODEL=gpt-5-mini
+export BIOWATCH_SUMMARY_PROMPT_VERSION=v1
+```
 
 Run the local morning-delivery stack:
 
 ```sh
 export BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
-docker compose up --build postgres redis elasticsearch api worker scheduler bot
+export BIOWATCH_LLM_API_KEY=your-openai-key
+docker compose up --build postgres redis elasticsearch api worker summary-worker scheduler bot
 docker compose exec api alembic upgrade head
 ```
 
@@ -174,6 +189,7 @@ separate terminals:
 ```sh
 make run
 make worker
+make summary-worker
 make scheduler
 make bot
 ```
@@ -187,8 +203,9 @@ curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/retry
 
 Automatic delivery is idempotent for a subscriber and scheduled morning. Failed
 deliveries are not retried automatically; use the retry endpoint after
-inspecting the failure. Webhooks, Kubernetes CronJobs, delivery AI summaries,
-and advanced notification controls are intentionally not included yet.
+inspecting the failure. Webhooks, Kubernetes CronJobs, PDF parsing, RAG,
+citation graph analysis, semantic summary search, and advanced notification
+controls are intentionally not included yet.
 
 ## MVP API
 
@@ -357,18 +374,22 @@ increase(biowatch_ingestion_jobs_total[1h])
 increase(biowatch_ingestion_records_fetched_total[1h])
 increase(biowatch_telegram_delivery_attempts_total[1h])
 increase(biowatch_telegram_delivery_items_sent_total[1h])
+increase(biowatch_paper_summary_jobs_total[1h])
+increase(biowatch_paper_summary_cache_total[1h])
 ```
 
 For Kubernetes, raw manifests add Prometheus scrape annotations to API and
 worker Services and include a scrape config ConfigMap at
 `infra/k8s/60-prometheus-scrape-config.yaml`. The Helm chart renders the same
-scrape annotations by default and exposes the worker metrics Service.
+scrape annotations by default and exposes the worker and summary-worker metrics
+Services.
 
 Port-forward metrics in Kubernetes:
 
 ```sh
 kubectl -n biowatch port-forward svc/biowatch-api 8000:8000
 kubectl -n biowatch port-forward svc/biowatch-worker 9100:9100
+kubectl -n biowatch port-forward svc/biowatch-summary-worker 9101:9100
 ```
 
 Europe PMC client settings can be configured with:
@@ -381,6 +402,12 @@ BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS=10.0
 BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS=3
 BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS=0.25
 BIOWATCH_WORKER_METRICS_PORT=9100
+BIOWATCH_LLM_PROVIDER=openai
+BIOWATCH_LLM_API_KEY=set-openai-key-locally
+BIOWATCH_LLM_MODEL=gpt-5-mini
+BIOWATCH_LLM_TIMEOUT_SECONDS=20.0
+BIOWATCH_SUMMARY_PROMPT_VERSION=v1
+BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS=15.0
 ```
 
 Run tests:
@@ -437,15 +464,18 @@ kind load docker-image biowatch:local --name biowatch
 ```
 
 Create the runtime Secret from local shell values. Do not commit real Telegram
-tokens to git; rotate any token pasted into chat, logs, or source control.
+tokens or OpenAI API keys to git; rotate any token pasted into chat, logs, or
+source control.
 
 ```sh
 export BIOWATCH_TELEGRAM_BOT_TOKEN='set-token-locally'
+export BIOWATCH_LLM_API_KEY='set-openai-key-locally'
 kubectl create namespace biowatch --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n biowatch create secret generic biowatch-secret \
   --from-literal=POSTGRES_PASSWORD=biowatch \
   --from-literal=BIOWATCH_DATABASE_URL='postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch' \
   --from-literal=BIOWATCH_TELEGRAM_BOT_TOKEN="$BIOWATCH_TELEGRAM_BOT_TOKEN" \
+  --from-literal=BIOWATCH_LLM_API_KEY="$BIOWATCH_LLM_API_KEY" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -467,6 +497,7 @@ helm upgrade --install biowatch infra/helm/biowatch \
   --set image.pullPolicy=Never
 kubectl -n biowatch rollout status deploy/biowatch-api
 kubectl -n biowatch rollout status deploy/biowatch-worker
+kubectl -n biowatch rollout status deploy/biowatch-summary-worker
 kubectl -n biowatch rollout status deploy/biowatch-bot
 kubectl -n biowatch rollout status deploy/biowatch-scheduler
 ```
@@ -500,8 +531,10 @@ Check Telegram runtime pods and Secret injection:
 ```sh
 kubectl -n biowatch logs deploy/biowatch-bot -f
 kubectl -n biowatch logs deploy/biowatch-worker -f
+kubectl -n biowatch logs deploy/biowatch-summary-worker -f
 kubectl -n biowatch logs deploy/biowatch-scheduler -f
 kubectl -n biowatch exec deploy/biowatch-worker -- sh -lc 'test -n "$BIOWATCH_TELEGRAM_BOT_TOKEN" && echo token-present'
+kubectl -n biowatch exec deploy/biowatch-summary-worker -- sh -lc 'test -n "$BIOWATCH_LLM_API_KEY" && echo llm-key-present'
 helm test biowatch --namespace biowatch
 ```
 

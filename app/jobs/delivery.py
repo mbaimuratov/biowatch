@@ -4,7 +4,9 @@ import time
 from app.bot.sender import TelegramBotSender
 from app.core.config import get_settings
 from app.db.session import SessionLocal
+from app.jobs.queues import get_summary_queue
 from app.jobs.runtime import run_job_coroutine
+from app.jobs.summaries import process_paper_summary_job
 from app.models import TelegramDigestDelivery
 from app.observability.metrics import (
     TELEGRAM_DELIVERIES_IN_PROGRESS,
@@ -30,7 +32,13 @@ async def _process_morning_delivery_job(delivery_id: int) -> int:
     async with SessionLocal() as session:
         try:
             sender = _build_sender()
-            delivery = await process_morning_delivery(session, delivery_id, sender)
+            delivery = await process_morning_delivery(
+                session,
+                delivery_id,
+                sender,
+                summary_queue=get_summary_queue(),
+                summary_job_func=process_paper_summary_job,
+            )
             status = delivery.status
             item_count = len(delivery.items) if "items" in delivery.__dict__ else 0
             subscriber_id = delivery.subscriber_id

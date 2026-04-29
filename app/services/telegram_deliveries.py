@@ -1,7 +1,7 @@
 import logging
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -11,18 +11,22 @@ from sqlalchemy.orm import selectinload
 
 from app.bot.sender import TelegramSender
 from app.clients.europe_pmc import EuropePMCClient
+from app.core.config import get_settings
 from app.models import (
     Paper,
+    PaperSummary,
     TelegramDigestDelivery,
     TelegramDigestDeliveryItem,
     TelegramSubscriber,
     Topic,
     TopicPaper,
 )
+from app.observability.metrics import PAPER_SUMMARY_CACHE_TOTAL
 from app.search.client import PaperSearchClient
 from app.services import digests as digest_service
 from app.services import ingestion as ingestion_service
 from app.services import subscriptions as subscription_service
+from app.services import summaries as summary_service
 
 DELIVERY_STATUS_QUEUED = "queued"
 DELIVERY_STATUS_SENDING = "sending"
@@ -56,6 +60,7 @@ class MorningBriefItem:
     is_new: bool
     keyword_overlap: int
     has_link: bool
+    summary: PaperSummary | None = None
 
 
 def utc_now() -> datetime:
@@ -223,6 +228,9 @@ async def process_morning_delivery(
     sender: TelegramSender,
     europe_pmc_client: EuropePMCClient | None = None,
     paper_search_client: PaperSearchClient | None = None,
+    summary_queue: object | None = None,
+    summary_job_func: Callable[[int], int] | None = None,
+    summary_wait_timeout_seconds: float | None = None,
     now: datetime | None = None,
 ) -> TelegramDigestDelivery:
     processed_at = _as_utc(now or utc_now())
@@ -256,6 +264,13 @@ async def process_morning_delivery(
         )
         digest = await digest_service.generate_today_digest(session, now=processed_at)
         selected_items = await select_morning_brief_items(session, subscriber, processed_at)
+        selected_items = await attach_summaries_to_items(
+            session,
+            selected_items,
+            summary_queue=summary_queue,
+            summary_job_func=summary_job_func,
+            wait_timeout_seconds=summary_wait_timeout_seconds,
+        )
 
         delivery = await _load_delivery_for_processing(session, delivery.id)
         if delivery is None:
@@ -349,6 +364,39 @@ async def select_morning_brief_items(
     ]
     items.sort(key=_brief_sort_key)
     return items[: subscriber.article_count]
+
+
+async def attach_summaries_to_items(
+    session: AsyncSession,
+    items: list[MorningBriefItem],
+    *,
+    summary_queue: object | None = None,
+    summary_job_func: Callable[[int], int] | None = None,
+    wait_timeout_seconds: float | None = None,
+) -> list[MorningBriefItem]:
+    if not items:
+        return items
+
+    settings = get_settings()
+    preparation = await summary_service.prepare_summaries_for_papers(
+        session,
+        [item.paper for item in items],
+        model=settings.llm_model,
+        prompt_version=settings.summary_prompt_version,
+        summary_queue=summary_queue,
+        job_func=summary_job_func,
+        wait_timeout_seconds=(
+            settings.summary_wait_timeout_seconds
+            if wait_timeout_seconds is None
+            else wait_timeout_seconds
+        ),
+    )
+    PAPER_SUMMARY_CACHE_TOTAL.labels(result="hit").inc(preparation.cache_hits)
+    PAPER_SUMMARY_CACHE_TOTAL.labels(result="miss").inc(preparation.cache_misses)
+    return [
+        replace(item, summary=preparation.summaries_by_paper_id.get(item.paper.id))
+        for item in items
+    ]
 
 
 def render_morning_brief(
@@ -460,15 +508,26 @@ def _render_item(position: int, item: MorningBriefItem) -> str:
     paper = item.paper
     journal_date = _journal_date(paper)
     link = paper.url or (f"https://doi.org/{paper.doi}" if paper.doi else "Not available")
-    return "\n".join(
-        [
-            f"{position}. {paper.title}",
-            f"Topic: {item.topic.name}",
-            f"Why shown: {item.reason}",
-            f"Journal/date: {journal_date}",
-            f"Link: {link}",
-        ]
-    )
+    lines = [
+        f"{position}. {paper.title}",
+        f"Topic: {item.topic.name}",
+        f"Why shown: {item.reason}",
+        f"Journal/date: {journal_date}",
+        f"Link: {link}",
+    ]
+    if item.summary is not None and item.summary.status == summary_service.SUMMARY_STATUS_COMPLETED:
+        lines.extend(
+            [
+                "",
+                "AI summary:",
+                item.summary.summary_short or "",
+                "",
+                "Key points:",
+            ]
+        )
+        lines.extend(f"- {point}" for point in item.summary.normalized_key_points())
+        lines.extend(["", "Why it matters:", item.summary.why_it_matters or ""])
+    return "\n".join(lines)
 
 
 def _journal_date(paper: Paper) -> str:

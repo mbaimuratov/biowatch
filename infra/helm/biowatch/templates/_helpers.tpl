@@ -69,13 +69,30 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.app.europePmcMaxAttempts | quote }}
 - name: BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS
   value: {{ .Values.app.europePmcRetryBackoffSeconds | quote }}
-- name: BIOWATCH_WORKER_METRICS_PORT
-  value: {{ .Values.worker.metrics.port | quote }}
+- name: BIOWATCH_LLM_PROVIDER
+  value: {{ .Values.app.llmProvider | quote }}
+- name: BIOWATCH_LLM_MODEL
+  value: {{ .Values.app.llmModel | quote }}
+- name: BIOWATCH_LLM_TIMEOUT_SECONDS
+  value: {{ .Values.app.llmTimeoutSeconds | quote }}
+- name: BIOWATCH_SUMMARY_PROMPT_VERSION
+  value: {{ .Values.app.summaryPromptVersion | quote }}
+- name: BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS
+  value: {{ .Values.app.summaryWaitTimeoutSeconds | quote }}
 - name: BIOWATCH_DATABASE_URL
   valueFrom:
     secretKeyRef:
       name: {{ include "biowatch.secretName" . }}
       key: BIOWATCH_DATABASE_URL
+{{- end -}}
+
+{{- define "biowatch.llmApiKeyEnv" -}}
+- name: BIOWATCH_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "biowatch.secretName" . }}
+      key: BIOWATCH_LLM_API_KEY
+      optional: true
 {{- end -}}
 
 {{- define "biowatch.telegramTokenEnv" -}}

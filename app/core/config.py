@@ -19,6 +19,12 @@ class Settings:
     worker_metrics_port: int = 9100
     scheduler_interval_seconds: int = 60
     telegram_bot_token: str = ""
+    llm_provider: str = "openai"
+    llm_api_key: str = ""
+    llm_model: str = "gpt-5-mini"
+    llm_timeout_seconds: float = 20.0
+    summary_prompt_version: str = "v1"
+    summary_wait_timeout_seconds: float = 15.0
     pubmed_base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
@@ -75,5 +81,21 @@ def get_settings() -> Settings:
             )
         ),
         telegram_bot_token=getenv("BIOWATCH_TELEGRAM_BOT_TOKEN", Settings.telegram_bot_token),
+        llm_provider=getenv("BIOWATCH_LLM_PROVIDER", Settings.llm_provider),
+        llm_api_key=getenv("BIOWATCH_LLM_API_KEY", Settings.llm_api_key),
+        llm_model=getenv("BIOWATCH_LLM_MODEL", Settings.llm_model),
+        llm_timeout_seconds=float(
+            getenv("BIOWATCH_LLM_TIMEOUT_SECONDS", str(Settings.llm_timeout_seconds))
+        ),
+        summary_prompt_version=getenv(
+            "BIOWATCH_SUMMARY_PROMPT_VERSION",
+            Settings.summary_prompt_version,
+        ),
+        summary_wait_timeout_seconds=float(
+            getenv(
+                "BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS",
+                str(Settings.summary_wait_timeout_seconds),
+            )
+        ),
         pubmed_base_url=getenv("BIOWATCH_PUBMED_BASE_URL", Settings.pubmed_base_url),
     )

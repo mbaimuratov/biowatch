@@ -13,6 +13,11 @@ app:
   europePmcTimeoutSeconds: "10.0"
   europePmcMaxAttempts: "3"
   europePmcRetryBackoffSeconds: "0.25"
+  llmProvider: openai
+  llmModel: gpt-5-mini
+  llmTimeoutSeconds: "20.0"
+  summaryPromptVersion: v1
+  summaryWaitTimeoutSeconds: "15.0"
 
 observability:
   prometheus:
@@ -25,6 +30,7 @@ secret:
   postgresPassword: ""
   databaseUrl: ""
   telegramBotToken: ""
+  llmApiKey: ""
 
 serviceAccount:
   create: true
@@ -54,6 +60,21 @@ api:
       periodSeconds: 20
 
 worker:
+  replicaCount: 1
+  metrics:
+    port: 9100
+    service:
+      annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+summaryWorker:
+  enabled: true
   replicaCount: 1
   metrics:
     port: 9100
