@@ -1,4 +1,6 @@
 import asyncio
+import json
+import logging
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, MockTransport, Request, Response
@@ -9,6 +11,7 @@ from app.clients.europe_pmc import EuropePMCClient
 from app.jobs.ingestion import process_ingestion_run_job
 from app.main import app
 from app.models import Topic
+from app.observability.logging import JsonFormatter
 from app.search.client import SearchError
 from app.services import ingestion as ingestion_service
 
@@ -63,6 +66,24 @@ def test_api_error_metrics_are_recorded(client: TestClient) -> None:
     assert 'biowatch_api_request_errors_total{method="GET",path="/papers/search"}' in (
         metrics_response.text
     )
+
+
+def test_json_formatter_redacts_telegram_bot_tokens() -> None:
+    formatter = JsonFormatter()
+    record = logging.LogRecord(
+        name="httpx",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="HTTP Request: POST https://api.telegram.org/bot123456:ABC_def-ghi/getUpdates",
+        args=(),
+        exc_info=None,
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert "bot123456:ABC_def-ghi" not in payload["message"]
+    assert "bot<redacted>" in payload["message"]
 
 
 def test_ingestion_success_metrics_are_recorded(async_session_factory, monkeypatch) -> None:
