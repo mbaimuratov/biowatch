@@ -1,0 +1,60 @@
+{{- if .Values.summaryWorker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "biowatch.fullname" . }}-summary-worker
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "summary-worker") | nindent 4 }}
+  annotations:
+    {{- if .Values.observability.prometheus.scrape }}
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: {{ .Values.summaryWorker.metrics.port | quote }}
+    {{- end }}
+    {{- with .Values.summaryWorker.metrics.service.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ports:
+    - name: metrics
+      port: {{ .Values.summaryWorker.metrics.port }}
+      targetPort: metrics
+  selector:
+    {{- include "biowatch.selectorLabels" (dict "root" . "component" "summary-worker") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biowatch.fullname" . }}-summary-worker
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "summary-worker") | nindent 4 }}
+spec:
+  replicas: {{ .Values.summaryWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "summary-worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "summary-worker") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "summary-worker") }}
+      containers:
+        - name: summary-worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.jobs.summary_worker
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.summaryWorker.metrics.port }}
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+            {{- include "biowatch.llmApiKeyEnv" . | nindent 12 }}
+            - name: BIOWATCH_WORKER_METRICS_PORT
+              value: {{ .Values.summaryWorker.metrics.port | quote }}
+          resources:
+            {{- toYaml .Values.summaryWorker.resources | nindent 12 }}
+{{- end }}
