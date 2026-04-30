@@ -156,12 +156,18 @@ keyboard for common actions.
 
 BioWatch can also send a persistent morning brief for each enabled Telegram
 subscriber. The scheduler checks subscriber timezone and `morning_send_time`,
-queues one delivery per subscriber/scheduled morning, and the worker processes
-the delivery. Delivery jobs ingest due subscriber topics, generate/reuse the
-daily digest, select up to `article_count` papers, enqueue missing AI summaries,
-wait briefly for completed summaries, send Telegram messages, and record
-delivery status/items. If OpenAI is unavailable or summaries time out, the
-brief still sends with the existing title/topic/reason fallback.
+prepares one delivery per subscriber/scheduled morning 30 minutes before send
+time, and then sends only already-prepared message chunks at send time.
+Preparation jobs ingest due subscriber topics, generate/reuse the daily digest,
+select up to `article_count` papers, require completed AI summaries, render
+Telegram message chunks, and mark the delivery `ready`. Send jobs only read
+persisted message chunks and send them; they do not call Europe PMC, generate a
+digest, rank papers, or call the LLM.
+
+If the prepared brief or any required summary is not ready at send time,
+BioWatch sends nothing and marks the delivery `not_ready` for operator
+inspection. A no-match brief is still considered complete and can be prepared
+and sent.
 
 AI summaries are generated only for papers selected for the morning brief. They
 use paper title and abstract only; BioWatch does not parse PDFs, use RAG, inspect
@@ -172,6 +178,8 @@ OpenAI with local environment variables and do not commit API keys:
 export BIOWATCH_LLM_API_KEY='set-openai-key-locally'
 export BIOWATCH_LLM_MODEL=gpt-5-mini
 export BIOWATCH_SUMMARY_PROMPT_VERSION=v1
+export BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES=30
+export BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS=1500.0
 ```
 
 Run the local morning-delivery stack:
@@ -199,11 +207,14 @@ Inspect and retry deliveries through the admin/debug API:
 ```sh
 curl http://127.0.0.1:8000/telegram/deliveries
 curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/retry
+curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/prepare
 ```
 
 Automatic delivery is idempotent for a subscriber and scheduled morning. Failed
-deliveries are not retried automatically; use the retry endpoint after
-inspecting the failure. Webhooks, Kubernetes CronJobs, PDF parsing, RAG,
+sends are not retried automatically; use the retry endpoint after inspecting the
+failure. Use the prepare endpoint to re-run a `not_ready` preparation after
+fixing the cause, such as missing summaries or an unavailable LLM. Webhooks,
+Kubernetes CronJobs, PDF parsing, RAG,
 citation graph analysis, semantic summary search, and advanced notification
 controls are intentionally not included yet.
 
@@ -222,6 +233,7 @@ GET  /digests/today
 GET  /digests/{digest_date}
 GET  /telegram/deliveries
 POST /telegram/deliveries/{delivery_id}/retry
+POST /telegram/deliveries/{delivery_id}/prepare
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
@@ -408,6 +420,8 @@ BIOWATCH_LLM_MODEL=gpt-5-mini
 BIOWATCH_LLM_TIMEOUT_SECONDS=20.0
 BIOWATCH_SUMMARY_PROMPT_VERSION=v1
 BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS=15.0
+BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES=30
+BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS=1500.0
 ```
 
 Run tests:

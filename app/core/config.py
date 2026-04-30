@@ -25,6 +25,8 @@ class Settings:
     llm_timeout_seconds: float = 20.0
     summary_prompt_version: str = "v1"
     summary_wait_timeout_seconds: float = 15.0
+    delivery_prepare_offset_minutes: int = 30
+    delivery_prepare_summary_timeout_seconds: float = 1500.0
     pubmed_base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
@@ -95,6 +97,18 @@ def get_settings() -> Settings:
             getenv(
                 "BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS",
                 str(Settings.summary_wait_timeout_seconds),
+            )
+        ),
+        delivery_prepare_offset_minutes=int(
+            getenv(
+                "BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES",
+                str(Settings.delivery_prepare_offset_minutes),
+            )
+        ),
+        delivery_prepare_summary_timeout_seconds=float(
+            getenv(
+                "BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS",
+                str(Settings.delivery_prepare_summary_timeout_seconds),
             )
         ),
         pubmed_base_url=getenv("BIOWATCH_PUBMED_BASE_URL", Settings.pubmed_base_url),
