@@ -79,6 +79,10 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.app.summaryPromptVersion | quote }}
 - name: BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS
   value: {{ .Values.app.summaryWaitTimeoutSeconds | quote }}
+- name: BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES
+  value: {{ .Values.app.deliveryPrepareOffsetMinutes | quote }}
+- name: BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS
+  value: {{ .Values.app.deliveryPrepareSummaryTimeoutSeconds | quote }}
 - name: BIOWATCH_DATABASE_URL
   valueFrom:
     secretKeyRef:

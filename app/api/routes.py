@@ -6,7 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_session
-from app.jobs.delivery import process_morning_delivery_job
+from app.jobs.delivery import (
+    process_morning_delivery_preparation_job,
+    process_morning_delivery_send_job,
+)
 from app.jobs.ingestion import process_ingestion_run_job
 from app.jobs.queues import get_delivery_queue, get_ingestion_queue
 from app.schemas.digests import DigestRead
@@ -212,7 +215,7 @@ async def retry_telegram_delivery(
             session,
             delivery_id,
             delivery_queue,
-            process_morning_delivery_job,
+            process_morning_delivery_send_job,
         )
     except delivery_service.DeliveryNotFoundError as exc:
         raise HTTPException(
@@ -223,6 +226,36 @@ async def retry_telegram_delivery(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only failed Telegram deliveries can be retried",
+        ) from exc
+
+
+@router.post(
+    "/telegram/deliveries/{delivery_id}/prepare",
+    response_model=TelegramDigestDeliveryRead,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["telegram"],
+)
+async def retry_telegram_delivery_preparation(
+    delivery_id: int,
+    session: SessionDep,
+    delivery_queue: DeliveryQueueDep,
+) -> TelegramDigestDeliveryRead:
+    try:
+        return await delivery_service.retry_not_ready_delivery_preparation(
+            session,
+            delivery_id,
+            delivery_queue,
+            process_morning_delivery_preparation_job,
+        )
+    except delivery_service.DeliveryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Telegram delivery not found",
+        ) from exc
+    except delivery_service.DeliveryRetryNotAllowedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only not-ready Telegram deliveries can be prepared again",
         ) from exc
 
 

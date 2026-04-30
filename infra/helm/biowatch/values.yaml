@@ -18,6 +18,8 @@ app:
   llmTimeoutSeconds: "20.0"
   summaryPromptVersion: v1
   summaryWaitTimeoutSeconds: "15.0"
+  deliveryPrepareOffsetMinutes: "30"
+  deliveryPrepareSummaryTimeoutSeconds: "1500.0"
 
 observability:
   prometheus:
