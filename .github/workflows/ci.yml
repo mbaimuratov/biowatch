@@ -84,8 +84,8 @@ jobs:
             --namespace biowatch \
             -f infra/helm/biowatch/values-dev.yaml
 
-      - name: Render prod-like values
+      - name: Render prod values
         run: |
           helm template biowatch infra/helm/biowatch \
             --namespace biowatch \
-            -f infra/helm/biowatch/values-prod-like.yaml
+            -f infra/helm/biowatch/values-prod.yaml
