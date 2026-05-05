@@ -114,7 +114,8 @@ Set the bot token in your local environment. Do not commit real Telegram tokens;
 rotate any token that was pasted into chat, logs, or source control.
 
 ```sh
-BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
 ```
 
 Run the bot locally:
@@ -163,7 +164,8 @@ record delivery status/items.
 Run the local morning-delivery stack:
 
 ```sh
-export BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
 docker compose up --build postgres redis elasticsearch api worker scheduler bot
 docker compose exec api alembic upgrade head
 ```
@@ -405,6 +407,8 @@ pushes the app image to GitHub Container Registry as
 `ghcr.io/mbaimuratov/biowatch:<commit-sha>` for both `linux/amd64` and
 `linux/arm64`.
 
+The image workflow also runs on pull requests as a no-push Docker build check.
+
 No cloud deployment secrets are required. GHCR publishing uses the built-in
 `GITHUB_TOKEN` with `packages: write` permission. Before deploying to an ARM64
 VM, verify that the chosen tag includes `linux/arm64`:
@@ -420,6 +424,10 @@ BioWatch includes raw Kubernetes manifests under `infra/k8s` and a Helm chart
 under `infra/helm/biowatch`. From now on, Helm on kind is the default local
 runtime path. The raw manifests remain useful for understanding and debugging
 the objects.
+
+Production uses Argo CD GitOps on the UTM k3s VM. See
+[docs/prod-gitops.md](docs/prod-gitops.md) for bootstrap, sealed secrets, and
+Git-only image promotion.
 
 Create a local kind cluster with HTTP ingress mapped to `localhost:8080`:
 
@@ -448,12 +456,14 @@ Create the runtime Secret from local shell values. Do not commit real Telegram
 tokens to git; rotate any token pasted into chat, logs, or source control.
 
 ```sh
-export BIOWATCH_TELEGRAM_BOT_TOKEN='set-token-locally'
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
+TELEGRAM_SECRET_KEY=BIOWATCH_TELEGRAM_BOT_TOKEN
 kubectl create namespace biowatch --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n biowatch create secret generic biowatch-secret \
   --from-literal=POSTGRES_PASSWORD=biowatch \
   --from-literal=BIOWATCH_DATABASE_URL='postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch' \
-  --from-literal=BIOWATCH_TELEGRAM_BOT_TOKEN="$BIOWATCH_TELEGRAM_BOT_TOKEN" \
+  --from-literal="${TELEGRAM_SECRET_KEY}=$BIOWATCH_TELEGRAM_BOT_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 

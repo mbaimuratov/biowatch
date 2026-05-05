@@ -1,4 +1,5 @@
 global:
+  domain: argocd.local
   logging:
     format: json
     level: info
@@ -7,9 +8,12 @@ configs:
   params:
     server.insecure: true
   cm:
+    admin.enabled: true
     application.resourceTrackingMethod: annotation
   rbac:
     policy.default: role:readonly
+    policy.csv: |
+      g, admin, role:admin
 
 server:
   replicas: 1
@@ -21,6 +25,7 @@ server:
     hostname: argocd.local
     path: /
     pathType: Prefix
+    tls: false
 
 controller:
   replicas: 1
