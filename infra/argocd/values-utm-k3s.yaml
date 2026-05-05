@@ -1,0 +1,38 @@
+global:
+  logging:
+    format: json
+    level: info
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    application.resourceTrackingMethod: annotation
+  rbac:
+    policy.default: role:readonly
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.local
+    path: /
+    pathType: Prefix
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+redis-ha:
+  enabled: false
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
