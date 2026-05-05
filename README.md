@@ -397,7 +397,6 @@ CI validates:
 
 - `ruff check .`
 - `pytest`
-- Docker builds for `biowatch-api:ci` and `biowatch-worker:ci`
 - `helm lint`
 - `helm template` with development and production values
 
