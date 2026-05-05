@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from app.models import Digest, DigestItem, Paper, Topic, TopicPaper
 from app.services import digests as digest_service
 
-NOW = datetime(2026, 4, 29, 8, 0, tzinfo=UTC)
+NOW = datetime.now(UTC)
 
 
 def test_digest_tables_can_persist_digest_items(async_session_factory) -> None:
