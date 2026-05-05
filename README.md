@@ -399,12 +399,21 @@ CI validates:
 - `pytest`
 - Docker builds for `biowatch-api:ci` and `biowatch-worker:ci`
 - `helm lint`
-- `helm template` with development and production-like values
+- `helm template` with development and production values
 
-The current workflow does not deploy to Kubernetes or cloud infrastructure, and
-it does not push Docker images. No repository secrets are required right now.
-Future image publishing can use `GITHUB_TOKEN` package permissions or registry
-credentials such as `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
+Image publishing runs on pushes to `main`, `v*` tags, and manual dispatch. It
+pushes the app image to GitHub Container Registry as
+`ghcr.io/mbaimuratov/biowatch:<commit-sha>` for both `linux/amd64` and
+`linux/arm64`.
+
+No cloud deployment secrets are required. GHCR publishing uses the built-in
+`GITHUB_TOKEN` with `packages: write` permission. Before deploying to an ARM64
+VM, verify that the chosen tag includes `linux/arm64`:
+
+```sh
+CURRENT_TAG="$(git rev-parse HEAD)"
+docker buildx imagetools inspect ghcr.io/mbaimuratov/biowatch:${CURRENT_TAG}
+```
 
 ## Kubernetes and Helm
 
