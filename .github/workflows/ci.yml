@@ -56,10 +56,14 @@ jobs:
         run: |
           helm template biowatch infra/helm/biowatch \
             --namespace biowatch \
-            -f infra/helm/biowatch/values-dev.yaml
+            -f infra/helm/biowatch/values-dev.yaml \
+            > /tmp/biowatch-dev-render.yaml
+          scripts/validate-helm-serviceaccounts.sh /tmp/biowatch-dev-render.yaml
 
       - name: Render prod values
         run: |
           helm template biowatch infra/helm/biowatch \
             --namespace biowatch-prod \
-            -f infra/helm/biowatch/values-prod.yaml
+            -f infra/helm/biowatch/values-prod.yaml \
+            > /tmp/biowatch-prod-render.yaml
+          scripts/validate-helm-serviceaccounts.sh /tmp/biowatch-prod-render.yaml
