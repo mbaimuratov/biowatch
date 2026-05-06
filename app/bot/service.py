@@ -75,7 +75,7 @@ async def start(session: AsyncSession, identity: TelegramIdentity) -> str:
     subscriber = await ensure_subscriber(session, identity)
     name = subscriber.first_name or subscriber.username or "there"
     return (
-        f"Hi {name}. BioWatch is ready.\n\n"
+        f"Hi {name}. BioWatch is ready!.\n\n"
         "BioWatch is a Telegram-first biomedical reading bot. It watches your research "
         "topics, stores matching papers from biomedical literature sources, and can send "
         "a short reading brief for this chat.\n\n"
