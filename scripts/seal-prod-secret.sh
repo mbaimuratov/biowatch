@@ -22,7 +22,7 @@ command -v helm >/dev/null || { echo "helm is required"; exit 1; }
 command -v kubeseal >/dev/null || { echo "kubeseal is required"; exit 1; }
 
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-biowatch}"
-BIOWATCH_DATABASE_URL="${BIOWATCH_DATABASE_URL:-postgresql+asyncpg://biowatch:${POSTGRES_PASSWORD}@biowatch-postgres:5432/biowatch}"
+BIOWATCH_DATABASE_URL="${BIOWATCH_DATABASE_URL:-postgresql+asyncpg://biowatch:${POSTGRES_PASSWORD}@biowatch-prod-postgres:5432/biowatch}"
 telegram_key="BIOWATCH_TELEGRAM_BOT_TOKEN"
 llm_key="BIOWATCH_LLM_API_KEY"
 

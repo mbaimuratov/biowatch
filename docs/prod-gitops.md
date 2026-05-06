@@ -36,7 +36,8 @@ export BIOWATCH_LLM_API_KEY
 
 The sealing script installs or upgrades the pinned Sealed Secrets controller if
 it is not already present, then uses its public certificate to create the
-encrypted Secret manifest.
+encrypted Secret manifest. By default it writes an in-cluster database URL that
+points at the production Helm release's Postgres Service.
 
 The sealing script writes only encrypted data to:
 
