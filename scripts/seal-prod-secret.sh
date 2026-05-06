@@ -18,6 +18,7 @@ require_env BIOWATCH_TELEGRAM_BOT_TOKEN
 require_env BIOWATCH_LLM_API_KEY
 
 command -v kubectl >/dev/null || { echo "kubectl is required"; exit 1; }
+command -v helm >/dev/null || { echo "helm is required"; exit 1; }
 command -v kubeseal >/dev/null || { echo "kubeseal is required"; exit 1; }
 
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-biowatch}"
@@ -32,6 +33,15 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 echo "== Checking cluster access =="
 kubectl get nodes >/dev/null
+
+echo "== Ensuring Sealed Secrets controller =="
+helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets >/dev/null
+helm repo update sealed-secrets >/dev/null
+helm upgrade --install sealed-secrets sealed-secrets/sealed-secrets \
+  --namespace sealed-secrets \
+  --create-namespace \
+  --version 2.17.3 >/dev/null
+kubectl -n sealed-secrets rollout status deploy/sealed-secrets --timeout=300s
 
 echo "== Fetching Sealed Secrets public certificate =="
 kubeseal \
