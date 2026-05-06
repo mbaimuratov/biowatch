@@ -29,7 +29,7 @@ kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 helm upgrade --install argocd argo/argo-cd \
   --namespace argocd \
   --version 9.3.7 \
-  -f "$ROOT_DIR/infra/argocd/values-prod.yaml"
+  -f "$ROOT_DIR/infra/argocd/values.yaml"
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=300s
 kubectl -n argocd rollout status statefulset/argocd-application-controller --timeout=300s

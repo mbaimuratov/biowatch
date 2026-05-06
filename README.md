@@ -417,6 +417,10 @@ pushes the app image to GitHub Container Registry as
 `ghcr.io/mbaimuratov/biowatch:<commit-sha>` for both `linux/amd64` and
 `linux/arm64`.
 
+Production deployment is separate from `main`: after a `main` image is
+published, the promotion workflow opens a PR into the `prod` branch. Argo CD
+tracks `prod`, so merging that promotion PR is the production deployment gate.
+
 The image workflow also runs on pull requests as a no-push Docker build check.
 
 No cloud deployment secrets are required. GHCR publishing uses the built-in
@@ -437,7 +441,7 @@ the objects.
 
 Production uses Argo CD GitOps on the UTM k3s VM. See
 [docs/prod-gitops.md](docs/prod-gitops.md) for bootstrap, sealed secrets, and
-Git-only image promotion.
+the `main` to `prod` image promotion flow.
 
 Create a local kind cluster with HTTP ingress mapped to `localhost:8080`:
 
