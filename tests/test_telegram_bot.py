@@ -110,7 +110,7 @@ def test_bot_service_manages_subscriber_settings_and_topics(async_session_factor
 
     result = asyncio.run(scenario())
 
-    assert "BioWatch is ready" in result["start"]
+    assert "BioWatch is ready!" in result["start"]
     assert "Telegram-first biomedical reading bot" in result["start"]
     assert "/addtopic Spatial transcriptomics" in result["start"]
     assert result["count"] == "Morning article count set to 5."
