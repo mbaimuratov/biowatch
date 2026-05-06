@@ -6,13 +6,16 @@ metadata:
 spec:
   project: biowatch
 
-  source:
-    repoURL: https://github.com/mbaimuratov/biowatch.git
-    targetRevision: main
-    path: infra/helm/biowatch
-    helm:
-      valueFiles:
-        - values-prod.yaml
+  sources:
+    - repoURL: https://github.com/mbaimuratov/biowatch.git
+      targetRevision: prod
+      path: infra/helm/biowatch
+      helm:
+        valueFiles:
+          - $values/infra/gitops/environments/prod/values.yaml
+    - repoURL: https://github.com/mbaimuratov/biowatch.git
+      targetRevision: prod
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc

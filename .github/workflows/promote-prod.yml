@@ -1,0 +1,132 @@
+name: Promote prod
+
+on:
+  workflow_run:
+    workflows:
+      - Publish image
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  promote:
+    name: Open prod promotion PR
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Check prod branch
+        id: prod_branch
+        run: |
+          repo_url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git ls-remote --exit-code --heads "$repo_url" prod >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out prod
+        if: steps.prod_branch.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: prod
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set promotion metadata
+        if: steps.prod_branch.outputs.exists == 'true'
+        id: meta
+        run: |
+          sha="${{ github.event.workflow_run.head_sha }}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${sha:0:12}" >> "$GITHUB_OUTPUT"
+          echo "branch=codex/promote-prod-${sha:0:12}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.prod_branch.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: steps.prod_branch.outputs.exists == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify published image
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha }}"
+          docker buildx imagetools inspect "$image" > /tmp/biowatch-prod-image.txt
+          grep -q "Platform:    linux/amd64" /tmp/biowatch-prod-image.txt
+          grep -q "Platform:    linux/arm64" /tmp/biowatch-prod-image.txt
+
+      - name: Merge main into promotion branch
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B "${{ steps.meta.outputs.branch }}"
+          git merge --no-edit origin/main
+
+      - name: Set prod image tag
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("infra/gitops/environments/prod/values.yaml")
+          sha = "${{ steps.meta.outputs.sha }}"
+          text = path.read_text()
+          updated, count = re.subn(
+              r"(?m)^  tag: [0-9a-f]{40}$",
+              f"  tag: {sha}",
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("could not update prod image tag")
+          path.write_text(updated)
+          PY
+
+      - name: Validate promotion
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: scripts/validate-prod-promotion.sh
+
+      - name: Commit promotion
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: |
+          git add infra/gitops/environments/prod/values.yaml
+          git commit -m "Promote prod to ${{ steps.meta.outputs.short_sha }}"
+
+      - name: Push promotion branch
+        if: steps.prod_branch.outputs.exists == 'true'
+        run: git push --force-with-lease origin "${{ steps.meta.outputs.branch }}"
+
+      - name: Open promotion PR
+        if: steps.prod_branch.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view "${{ steps.meta.outputs.branch }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            exit 0
+          fi
+          gh pr create \
+            --repo "${{ github.repository }}" \
+            --base prod \
+            --head "${{ steps.meta.outputs.branch }}" \
+            --title "Promote prod to ${{ steps.meta.outputs.short_sha }}" \
+            --body "Promotes BioWatch production to image tag \`${{ steps.meta.outputs.sha }}\` after the multi-arch GHCR image was published and validated."

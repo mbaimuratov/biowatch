@@ -109,22 +109,18 @@ kubectl get appprojects.argoproj.io -n argocd
 
 ## Git-Only Image Promotion
 
-Production image promotion is a Git change only.
+`main` is the integration branch. Merging to `main` publishes a multi-arch GHCR
+image, but it does not deploy production.
 
-1. Build and publish a new GHCR image through the image workflow.
-2. Verify the selected image tag supports ARM64:
-
-```sh
-docker buildx imagetools inspect ghcr.io/mbaimuratov/biowatch:<commit-sha>
-```
-
-3. Edit only the image tag in:
+Production Argo CD tracks the `prod` branch. After the image workflow succeeds
+on `main`, the promotion workflow opens a PR into `prod`. That PR contains the
+matching chart/code changes and updates:
 
 ```text
-infra/helm/biowatch/values-prod.yaml
+infra/gitops/environments/prod/values.yaml
 ```
 
-Example:
+The production image tag must be a full commit SHA:
 
 ```yaml
 image:
@@ -132,11 +128,32 @@ image:
   tag: <commit-sha>
 ```
 
-4. Open a PR.
-5. Wait for CI.
-6. Merge to `main`.
-7. Argo CD detects the Git change and syncs `biowatch-prod`.
-8. Kubernetes rolls out the new image.
+The promotion PR validates:
+
+- the GHCR image exists
+- `linux/amd64` and `linux/arm64` are present
+- Helm renders successfully for `biowatch-prod`
+- every BioWatch workload uses the promoted image tag
+
+Merge the promotion PR into `prod` to deploy. Argo CD detects the `prod` branch
+change and syncs `biowatch-prod`.
+
+Rollback is also Git-only: revert the promotion merge on `prod`, or promote an
+earlier known-good commit SHA with a new promotion PR.
+
+## Initial Prod Branch Cutover
+
+After the clean promotion workflow lands on `main`, create the long-lived
+production branch from that commit:
+
+```sh
+git fetch origin main
+git switch --detach origin/main
+git push origin HEAD:prod
+```
+
+Argo CD then tracks `prod` for the BioWatch application. Future production
+rollouts come from promotion PRs into `prod`, not direct changes on `main`.
 
 ## Forbidden Deployment Commands
 
@@ -151,4 +168,4 @@ kubectl edit deployment ...
 
 Those commands mutate the cluster outside Git and break the intended production
 source of truth. After bootstrap, production changes must flow through Git,
-CI, merge to `main`, and Argo CD sync.
+CI, merge to `prod`, and Argo CD sync.
