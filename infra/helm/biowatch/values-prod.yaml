@@ -3,6 +3,9 @@ image:
   tag: v0.1.0
   pullPolicy: IfNotPresent
 
+app:
+  environment: production
+
 secret:
   create: false
   existingSecret: biowatch-secret

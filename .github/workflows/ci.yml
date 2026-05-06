@@ -49,6 +49,9 @@ jobs:
       - name: Helm lint
         run: helm lint infra/helm/biowatch -f infra/helm/biowatch/values-dev.yaml
 
+      - name: Helm lint prod
+        run: helm lint infra/helm/biowatch -f infra/helm/biowatch/values-prod.yaml
+
       - name: Render dev values
         run: |
           helm template biowatch infra/helm/biowatch \
@@ -58,5 +61,5 @@ jobs:
       - name: Render prod values
         run: |
           helm template biowatch infra/helm/biowatch \
-            --namespace biowatch \
+            --namespace biowatch-prod \
             -f infra/helm/biowatch/values-prod.yaml
