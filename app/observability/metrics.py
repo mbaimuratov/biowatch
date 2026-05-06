@@ -78,3 +78,21 @@ TELEGRAM_DELIVERIES_IN_PROGRESS = Gauge(
     "biowatch_telegram_deliveries_in_progress",
     "Current Telegram digest deliveries being processed by this worker.",
 )
+
+PAPER_SUMMARY_JOBS_TOTAL = Counter(
+    "biowatch_paper_summary_jobs_total",
+    "Total paper summary jobs by status.",
+    ("status",),
+)
+
+PAPER_SUMMARY_JOB_DURATION_SECONDS = Histogram(
+    "biowatch_paper_summary_job_duration_seconds",
+    "Paper summary job duration in seconds.",
+    ("status",),
+)
+
+PAPER_SUMMARY_CACHE_TOTAL = Counter(
+    "biowatch_paper_summary_cache_total",
+    "Paper summary cache checks by result.",
+    ("result",),
+)

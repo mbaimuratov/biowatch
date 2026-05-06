@@ -11,6 +11,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.digest import Digest
     from app.models.paper import Paper
+    from app.models.paper_summary import PaperSummary
     from app.models.telegram_subscriber import TelegramSubscriber
     from app.models.topic import Topic
 
@@ -19,7 +20,10 @@ class TelegramDigestDelivery(Base):
     __tablename__ = "telegram_digest_deliveries"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('queued', 'sending', 'sent', 'failed')",
+            "status IN ("
+            "'queued', 'preparing', 'ready', 'send_queued', 'sending', "
+            "'sent', 'not_ready', 'failed'"
+            ")",
             name="ck_telegram_digest_deliveries_status",
         ),
         Index(
@@ -41,6 +45,12 @@ class TelegramDigestDelivery(Base):
         nullable=True,
     )
     scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    preparation_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    prepared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    send_queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="queued", nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -51,6 +61,11 @@ class TelegramDigestDelivery(Base):
         back_populates="delivery",
         cascade="all, delete-orphan",
         order_by="TelegramDigestDeliveryItem.position",
+    )
+    messages: Mapped[list[TelegramDigestDeliveryMessage]] = relationship(
+        back_populates="delivery",
+        cascade="all, delete-orphan",
+        order_by="TelegramDigestDeliveryMessage.position",
     )
 
 
@@ -79,8 +94,35 @@ class TelegramDigestDeliveryItem(Base):
         ForeignKey("topics.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    summary_id: Mapped[int | None] = mapped_column(
+        ForeignKey("paper_summaries.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
     delivery: Mapped[TelegramDigestDelivery] = relationship(back_populates="items")
     paper: Mapped[Paper] = relationship()
+    summary: Mapped[PaperSummary | None] = relationship()
     topic: Mapped[Topic] = relationship()
+
+
+class TelegramDigestDeliveryMessage(Base):
+    __tablename__ = "telegram_digest_delivery_messages"
+    __table_args__ = (
+        Index(
+            "ix_telegram_digest_delivery_messages_delivery_position",
+            "delivery_id",
+            "position",
+            unique=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    delivery_id: Mapped[int] = mapped_column(
+        ForeignKey("telegram_digest_deliveries.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    delivery: Mapped[TelegramDigestDelivery] = relationship(back_populates="messages")

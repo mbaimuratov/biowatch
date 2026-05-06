@@ -18,7 +18,26 @@
         "existingSecret": { "type": "string" },
         "postgresPassword": { "type": "string" },
         "databaseUrl": { "type": "string" },
-        "telegramBotToken": { "type": "string" }
+        "telegramBotToken": { "type": "string" },
+        "llmApiKey": { "type": "string" }
+      }
+    },
+    "app": {
+      "type": "object",
+      "properties": {
+        "environment": { "type": "string" },
+        "elasticsearchIndex": { "type": "string" },
+        "elasticsearchTimeoutSeconds": { "type": "string" },
+        "europePmcTimeoutSeconds": { "type": "string" },
+        "europePmcMaxAttempts": { "type": "string" },
+        "europePmcRetryBackoffSeconds": { "type": "string" },
+        "llmProvider": { "type": "string" },
+        "llmModel": { "type": "string" },
+        "llmTimeoutSeconds": { "type": "string" },
+        "summaryPromptVersion": { "type": "string" },
+        "summaryWaitTimeoutSeconds": { "type": "string" },
+        "deliveryPrepareOffsetMinutes": { "type": "string" },
+        "deliveryPrepareSummaryTimeoutSeconds": { "type": "string" }
       }
     },
     "api": {
@@ -30,6 +49,19 @@
     "worker": {
       "type": "object",
       "properties": {
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        }
+      }
+    },
+    "summaryWorker": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
         "replicaCount": { "type": "integer", "minimum": 1 },
         "metrics": {
           "type": "object",

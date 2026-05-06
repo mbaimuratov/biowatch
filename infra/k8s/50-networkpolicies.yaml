@@ -116,6 +116,7 @@ spec:
         values:
           - api
           - worker
+          - summary-worker
           - bot
           - scheduler
           - migration

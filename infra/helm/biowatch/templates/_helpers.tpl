@@ -90,6 +90,15 @@ app.kubernetes.io/component: {{ .component }}
       key: BIOWATCH_DATABASE_URL
 {{- end -}}
 
+{{- define "biowatch.llmApiKeyEnv" -}}
+- name: BIOWATCH_LLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "biowatch.secretName" . }}
+      key: BIOWATCH_LLM_API_KEY
+      optional: true
+{{- end -}}
+
 {{- define "biowatch.telegramTokenEnv" -}}
 - name: BIOWATCH_TELEGRAM_BOT_TOKEN
   valueFrom:
