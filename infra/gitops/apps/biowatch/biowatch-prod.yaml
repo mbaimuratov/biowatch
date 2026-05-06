@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: biowatch-prod
+  namespace: argocd
+spec:
+  project: biowatch
+
+  source:
+    repoURL: https://github.com/mbaimuratov/biowatch.git
+    targetRevision: main
+    path: infra/helm/biowatch
+    helm:
+      valueFiles:
+        - values-prod.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: biowatch-prod
+
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

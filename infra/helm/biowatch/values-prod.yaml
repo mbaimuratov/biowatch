@@ -1,0 +1,69 @@
+image:
+  repository: ghcr.io/mbaimuratov/biowatch
+  tag: ae1da4ac86b1257f071facb375c98f3ffc2c6a75
+  pullPolicy: IfNotPresent
+
+app:
+  environment: production
+
+secret:
+  create: false
+  existingSecret: biowatch-secret
+
+ingress:
+  enabled: true
+  className: nginx
+  host: biowatch.local
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
+
+api:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+worker:
+  replicaCount: 1
+  metrics:
+    port: 9100
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+bot:
+  enabled: true
+  replicaCount: 1
+
+scheduler:
+  enabled: true
+  replicaCount: 1
+  intervalSeconds: 60
+
+postgres:
+  persistence:
+    enabled: true
+    size: 2Gi
+
+elasticsearch:
+  javaOpts: -Xms512m -Xmx512m
+  persistence:
+    enabled: true
+    size: 4Gi
+  resources:
+    requests:
+      cpu: 150m
+      memory: 768Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi

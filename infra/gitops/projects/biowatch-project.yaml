@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: biowatch
+  namespace: argocd
+spec:
+  description: BioWatch prod GitOps project
+
+  sourceRepos:
+    - https://github.com/mbaimuratov/biowatch.git
+
+  destinations:
+    - namespace: biowatch-prod
+      server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+
+  orphanedResources:
+    warn: true

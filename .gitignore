@@ -9,3 +9,6 @@ dist/
 build/
 *.egg-info/
 
+sealed-secrets-cert.pem
+*.pem
+/tmp/biowatch-secret.yaml

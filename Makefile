@@ -2,7 +2,7 @@ PYTHON ?= python3.12
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: install run worker summary-worker scheduler bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template
+.PHONY: install run worker scheduler bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template prod-bootstrap prod-seal-secret prod-argocd-login-help prod-status
 
 install:
 	$(PYTHON) -m venv $(VENV)
@@ -14,9 +14,6 @@ run:
 
 worker:
 	$(BIN)/python -m app.jobs.worker
-
-summary-worker:
-	$(BIN)/python -m app.jobs.summary_worker
 
 scheduler:
 	$(BIN)/python -m app.jobs.scheduler
@@ -34,7 +31,7 @@ format:
 	$(BIN)/ruff format .
 
 compose-up:
-	docker compose up -d postgres redis elasticsearch api worker summary-worker scheduler bot prometheus grafana
+	docker compose up -d postgres redis elasticsearch api worker scheduler bot prometheus grafana
 
 compose-down:
 	docker compose down
@@ -55,3 +52,22 @@ helm-template:
 	helm template biowatch infra/helm/biowatch \
 		--namespace biowatch \
 		-f infra/helm/biowatch/values-dev.yaml
+
+prod-bootstrap:
+	./scripts/bootstrap-prod.sh
+
+prod-seal-secret:
+	./scripts/seal-prod-secret.sh
+
+prod-argocd-login-help:
+	@echo 'export KUBECONFIG="$${KUBECONFIG:-$$HOME/.kube/biowatch-utm-k3s.yaml}"'
+	@echo 'export ARGOCD_PASSWORD="$$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)"'
+	@echo 'argocd login argocd.local --username admin --password "$$ARGOCD_PASSWORD" --insecure --grpc-web'
+
+prod-status:
+	@echo 'kubectl get pods -A'
+	@echo 'kubectl get pods -n biowatch-prod'
+	@echo 'kubectl get applications.argoproj.io -n argocd'
+	@echo 'kubectl get appprojects.argoproj.io -n argocd'
+	@echo 'argocd app list --grpc-web'
+	@echo 'argocd app get biowatch-prod --grpc-web'

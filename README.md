@@ -85,11 +85,10 @@ Grafana:        http://127.0.0.1:3000
 make test       # run pytest
 make lint       # run ruff checks
 make format     # format with ruff
-make compose-up # start PostgreSQL, Redis, Elasticsearch, API, workers, scheduler, bot, Prometheus, and Grafana
+make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, scheduler, bot, Prometheus, and Grafana
 make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
-make summary-worker # run the AI summary worker
 make scheduler  # enqueue due Telegram morning deliveries
 make bot        # run the Telegram bot with long polling
 make k8s-dry-run
@@ -115,7 +114,8 @@ Set the bot token in your local environment. Do not commit real Telegram tokens;
 rotate any token that was pasted into chat, logs, or source control.
 
 ```sh
-BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
 ```
 
 Run the bot locally:
@@ -156,38 +156,17 @@ keyboard for common actions.
 
 BioWatch can also send a persistent morning brief for each enabled Telegram
 subscriber. The scheduler checks subscriber timezone and `morning_send_time`,
-prepares one delivery per subscriber/scheduled morning 30 minutes before send
-time, and then sends only already-prepared message chunks at send time.
-Preparation jobs ingest due subscriber topics, generate/reuse the daily digest,
-select up to `article_count` papers, require completed AI summaries, render
-Telegram message chunks, and mark the delivery `ready`. Send jobs only read
-persisted message chunks and send them; they do not call Europe PMC, generate a
-digest, rank papers, or call the LLM.
-
-If the prepared brief or any required summary is not ready at send time,
-BioWatch sends nothing and marks the delivery `not_ready` for operator
-inspection. A no-match brief is still considered complete and can be prepared
-and sent.
-
-AI summaries are generated only for papers selected for the morning brief. They
-use paper title and abstract only; BioWatch does not parse PDFs, use RAG, inspect
-citation graphs, or use semantic search for summaries in this phase. Configure
-OpenAI with local environment variables and do not commit API keys:
-
-```sh
-export BIOWATCH_LLM_API_KEY='set-openai-key-locally'
-export BIOWATCH_LLM_MODEL=gpt-5-mini
-export BIOWATCH_SUMMARY_PROMPT_VERSION=v1
-export BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES=30
-export BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS=1500.0
-```
+queues one delivery per subscriber/scheduled morning, and the worker processes
+the delivery. Delivery jobs ingest due subscriber topics, generate/reuse the
+daily digest, select up to `article_count` papers, send Telegram messages, and
+record delivery status/items.
 
 Run the local morning-delivery stack:
 
 ```sh
-export BIOWATCH_TELEGRAM_BOT_TOKEN=your-telegram-token
-export BIOWATCH_LLM_API_KEY=your-openai-key
-docker compose up --build postgres redis elasticsearch api worker summary-worker scheduler bot
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
+docker compose up --build postgres redis elasticsearch api worker scheduler bot
 docker compose exec api alembic upgrade head
 ```
 
@@ -197,7 +176,6 @@ separate terminals:
 ```sh
 make run
 make worker
-make summary-worker
 make scheduler
 make bot
 ```
@@ -207,16 +185,12 @@ Inspect and retry deliveries through the admin/debug API:
 ```sh
 curl http://127.0.0.1:8000/telegram/deliveries
 curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/retry
-curl -X POST http://127.0.0.1:8000/telegram/deliveries/1/prepare
 ```
 
 Automatic delivery is idempotent for a subscriber and scheduled morning. Failed
-sends are not retried automatically; use the retry endpoint after inspecting the
-failure. Use the prepare endpoint to re-run a `not_ready` preparation after
-fixing the cause, such as missing summaries or an unavailable LLM. Webhooks,
-Kubernetes CronJobs, PDF parsing, RAG,
-citation graph analysis, semantic summary search, and advanced notification
-controls are intentionally not included yet.
+deliveries are not retried automatically; use the retry endpoint after
+inspecting the failure. Webhooks, Kubernetes CronJobs, delivery AI summaries,
+and advanced notification controls are intentionally not included yet.
 
 ## MVP API
 
@@ -233,7 +207,6 @@ GET  /digests/today
 GET  /digests/{digest_date}
 GET  /telegram/deliveries
 POST /telegram/deliveries/{delivery_id}/retry
-POST /telegram/deliveries/{delivery_id}/prepare
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
@@ -386,8 +359,6 @@ increase(biowatch_ingestion_jobs_total[1h])
 increase(biowatch_ingestion_records_fetched_total[1h])
 increase(biowatch_telegram_delivery_attempts_total[1h])
 increase(biowatch_telegram_delivery_items_sent_total[1h])
-increase(biowatch_paper_summary_jobs_total[1h])
-increase(biowatch_paper_summary_cache_total[1h])
 ```
 
 For Kubernetes, raw manifests add Prometheus scrape annotations to API and
@@ -438,14 +409,24 @@ CI validates:
 
 - `ruff check .`
 - `pytest`
-- Docker builds for `biowatch-api:ci` and `biowatch-worker:ci`
 - `helm lint`
-- `helm template` with development and production-like values
+- `helm template` with development and production values
 
-The current workflow does not deploy to Kubernetes or cloud infrastructure, and
-it does not push Docker images. No repository secrets are required right now.
-Future image publishing can use `GITHUB_TOKEN` package permissions or registry
-credentials such as `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
+Image publishing runs on pushes to `main`, `v*` tags, and manual dispatch. It
+pushes the app image to GitHub Container Registry as
+`ghcr.io/mbaimuratov/biowatch:<commit-sha>` for both `linux/amd64` and
+`linux/arm64`.
+
+The image workflow also runs on pull requests as a no-push Docker build check.
+
+No cloud deployment secrets are required. GHCR publishing uses the built-in
+`GITHUB_TOKEN` with `packages: write` permission. Before deploying to an ARM64
+VM, verify that the chosen tag includes `linux/arm64`:
+
+```sh
+CURRENT_TAG="$(git rev-parse HEAD)"
+docker buildx imagetools inspect ghcr.io/mbaimuratov/biowatch:${CURRENT_TAG}
+```
 
 ## Kubernetes and Helm
 
@@ -453,6 +434,10 @@ BioWatch includes raw Kubernetes manifests under `infra/k8s` and a Helm chart
 under `infra/helm/biowatch`. From now on, Helm on kind is the default local
 runtime path. The raw manifests remain useful for understanding and debugging
 the objects.
+
+Production uses Argo CD GitOps on the UTM k3s VM. See
+[docs/prod-gitops.md](docs/prod-gitops.md) for bootstrap, sealed secrets, and
+Git-only image promotion.
 
 Create a local kind cluster with HTTP ingress mapped to `localhost:8080`:
 
@@ -478,18 +463,17 @@ kind load docker-image biowatch:local --name biowatch
 ```
 
 Create the runtime Secret from local shell values. Do not commit real Telegram
-tokens or OpenAI API keys to git; rotate any token pasted into chat, logs, or
-source control.
+tokens to git; rotate any token pasted into chat, logs, or source control.
 
 ```sh
-export BIOWATCH_TELEGRAM_BOT_TOKEN='set-token-locally'
-export BIOWATCH_LLM_API_KEY='set-openai-key-locally'
+read -rsp 'Telegram bot token: ' BIOWATCH_TELEGRAM_BOT_TOKEN
+export BIOWATCH_TELEGRAM_BOT_TOKEN
+TELEGRAM_SECRET_KEY=BIOWATCH_TELEGRAM_BOT_TOKEN
 kubectl create namespace biowatch --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n biowatch create secret generic biowatch-secret \
   --from-literal=POSTGRES_PASSWORD=biowatch \
   --from-literal=BIOWATCH_DATABASE_URL='postgresql+asyncpg://biowatch:biowatch@biowatch-postgres:5432/biowatch' \
-  --from-literal=BIOWATCH_TELEGRAM_BOT_TOKEN="$BIOWATCH_TELEGRAM_BOT_TOKEN" \
-  --from-literal=BIOWATCH_LLM_API_KEY="$BIOWATCH_LLM_API_KEY" \
+  --from-literal="${TELEGRAM_SECRET_KEY}=$BIOWATCH_TELEGRAM_BOT_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -511,7 +495,6 @@ helm upgrade --install biowatch infra/helm/biowatch \
   --set image.pullPolicy=Never
 kubectl -n biowatch rollout status deploy/biowatch-api
 kubectl -n biowatch rollout status deploy/biowatch-worker
-kubectl -n biowatch rollout status deploy/biowatch-summary-worker
 kubectl -n biowatch rollout status deploy/biowatch-bot
 kubectl -n biowatch rollout status deploy/biowatch-scheduler
 ```
@@ -545,10 +528,8 @@ Check Telegram runtime pods and Secret injection:
 ```sh
 kubectl -n biowatch logs deploy/biowatch-bot -f
 kubectl -n biowatch logs deploy/biowatch-worker -f
-kubectl -n biowatch logs deploy/biowatch-summary-worker -f
 kubectl -n biowatch logs deploy/biowatch-scheduler -f
 kubectl -n biowatch exec deploy/biowatch-worker -- sh -lc 'test -n "$BIOWATCH_TELEGRAM_BOT_TOKEN" && echo token-present'
-kubectl -n biowatch exec deploy/biowatch-summary-worker -- sh -lc 'test -n "$BIOWATCH_LLM_API_KEY" && echo llm-key-present'
 helm test biowatch --namespace biowatch
 ```
 

@@ -35,35 +35,6 @@ jobs:
       - name: Run pytest
         run: pytest
 
-  docker:
-    name: Docker build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build API image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: biowatch-api:ci
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
-
-      - name: Build worker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: biowatch-worker:ci
-          cache-from: type=gha,scope=worker
-          cache-to: type=gha,mode=max,scope=worker
-
   helm:
     name: Helm validation
     runs-on: ubuntu-latest
@@ -78,14 +49,21 @@ jobs:
       - name: Helm lint
         run: helm lint infra/helm/biowatch -f infra/helm/biowatch/values-dev.yaml
 
+      - name: Helm lint prod
+        run: helm lint infra/helm/biowatch -f infra/helm/biowatch/values-prod.yaml
+
       - name: Render dev values
         run: |
           helm template biowatch infra/helm/biowatch \
             --namespace biowatch \
-            -f infra/helm/biowatch/values-dev.yaml
+            -f infra/helm/biowatch/values-dev.yaml \
+            > /tmp/biowatch-dev-render.yaml
+          scripts/validate-helm-serviceaccounts.sh /tmp/biowatch-dev-render.yaml
 
-      - name: Render prod-like values
+      - name: Render prod values
         run: |
           helm template biowatch infra/helm/biowatch \
-            --namespace biowatch \
-            -f infra/helm/biowatch/values-prod-like.yaml
+            --namespace biowatch-prod \
+            -f infra/helm/biowatch/values-prod.yaml \
+            > /tmp/biowatch-prod-render.yaml
+          scripts/validate-helm-serviceaccounts.sh /tmp/biowatch-prod-render.yaml

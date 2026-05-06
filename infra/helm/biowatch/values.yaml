@@ -32,7 +32,6 @@ secret:
   postgresPassword: ""
   databaseUrl: ""
   telegramBotToken: ""
-  llmApiKey: ""
 
 serviceAccount:
   create: true
@@ -62,21 +61,6 @@ api:
       periodSeconds: 20
 
 worker:
-  replicaCount: 1
-  metrics:
-    port: 9100
-    service:
-      annotations: {}
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
-
-summaryWorker:
-  enabled: true
   replicaCount: 1
   metrics:
     port: 9100
