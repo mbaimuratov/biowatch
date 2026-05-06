@@ -364,13 +364,15 @@ increase(biowatch_telegram_delivery_items_sent_total[1h])
 For Kubernetes, raw manifests add Prometheus scrape annotations to API and
 worker Services and include a scrape config ConfigMap at
 `infra/k8s/60-prometheus-scrape-config.yaml`. The Helm chart renders the same
-scrape annotations by default and exposes the worker metrics Service.
+scrape annotations by default and exposes the worker and summary-worker metrics
+Services.
 
 Port-forward metrics in Kubernetes:
 
 ```sh
 kubectl -n biowatch port-forward svc/biowatch-api 8000:8000
 kubectl -n biowatch port-forward svc/biowatch-worker 9100:9100
+kubectl -n biowatch port-forward svc/biowatch-summary-worker 9101:9100
 ```
 
 Europe PMC client settings can be configured with:
@@ -383,6 +385,14 @@ BIOWATCH_EUROPE_PMC_TIMEOUT_SECONDS=10.0
 BIOWATCH_EUROPE_PMC_MAX_ATTEMPTS=3
 BIOWATCH_EUROPE_PMC_RETRY_BACKOFF_SECONDS=0.25
 BIOWATCH_WORKER_METRICS_PORT=9100
+BIOWATCH_LLM_PROVIDER=openai
+# Set BIOWATCH_LLM_API_KEY in your shell or Kubernetes Secret.
+BIOWATCH_LLM_MODEL=gpt-5-mini
+BIOWATCH_LLM_TIMEOUT_SECONDS=20.0
+BIOWATCH_SUMMARY_PROMPT_VERSION=v1
+BIOWATCH_SUMMARY_WAIT_TIMEOUT_SECONDS=15.0
+BIOWATCH_DELIVERY_PREPARE_OFFSET_MINUTES=30
+BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS=1500.0
 ```
 
 Run tests:

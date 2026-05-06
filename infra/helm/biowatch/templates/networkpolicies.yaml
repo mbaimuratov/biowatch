@@ -76,6 +76,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: {{ include "biowatch.fullname" . }}-summary-worker-metrics-ingress
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "summary-worker") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "summary-worker") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.summaryWorker.metrics.port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: {{ include "biowatch.fullname" . }}-runtime-egress
   labels:
     {{- include "biowatch.labels" . | nindent 4 }}
@@ -87,6 +106,7 @@ spec:
         values:
           - api
           - worker
+          - summary-worker
           - bot
           - scheduler
           - migration
