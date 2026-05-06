@@ -30,7 +30,7 @@ api:
       memory: 512Mi
 
 worker:
-  replicaCount: 2
+  replicaCount: 1
   metrics:
     port: 9100
   resources:
