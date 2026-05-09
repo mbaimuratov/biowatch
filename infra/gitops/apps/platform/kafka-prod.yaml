@@ -1,16 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform
+  name: kafka-prod
   namespace: argocd
 spec:
-  description: Platform GitOps project
-
   project: platform
-  
+
   source:
     repoURL: https://github.com/mbaimuratov/biowatch.git
-    targetRevision: main
+    targetRevision: prod
     path: infra/gitops/kafka/prod
 
   destination:
