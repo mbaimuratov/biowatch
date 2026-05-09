@@ -10,6 +10,10 @@ spec:
     repoURL: https://strimzi.io/charts/
     chart: strimzi-kafka-operator
     targetRevision: 1.0.0
+    helm:
+      valuesObject:
+        watchNamespaces:
+          - kafka-prod
 
   destination:
     server: https://kubernetes.default.svc
@@ -17,7 +21,6 @@ spec:
 
   syncPolicy:
     automated:
-      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true

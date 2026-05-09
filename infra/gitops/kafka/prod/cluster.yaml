@@ -51,14 +51,6 @@ spec:
       min.insync.replicas: 1
       auto.create.topics.enable: false
 
-    resources:
-      requests:
-        cpu: 250m
-        memory: 768Mi
-      limits:
-        cpu: "1"
-        memory: 1536Mi
-
   entityOperator:
     topicOperator: {}
     userOperator: {}
