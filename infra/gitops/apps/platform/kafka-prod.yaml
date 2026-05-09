@@ -1,10 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
-kind: AppProject
+kind: Application
 metadata:
   name: platform
   namespace: argocd
 spec:
   description: Platform GitOps project
+
+  project: platform
+  
   source:
     repoURL: https://github.com/mbaimuratov/biowatch.git
     targetRevision: main
