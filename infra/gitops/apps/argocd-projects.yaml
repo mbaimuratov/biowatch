@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: biowatch-root
+  name: argocd-projects
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
 
   source:
     repoURL: https://github.com/mbaimuratov/biowatch.git
     targetRevision: prod
-    path: infra/gitops/apps
-    directory:
-      recurse: true
+    path: infra/gitops/projects
 
   destination:
     server: https://kubernetes.default.svc
@@ -21,5 +21,3 @@ spec:
     automated:
       prune: false
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
