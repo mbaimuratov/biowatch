@@ -10,7 +10,7 @@ spec:
 
   source:
     repoURL: https://github.com/mbaimuratov/biowatch.git
-    targetRevision: main
+    targetRevision: prod
     path: infra/gitops/projects
 
   destination:
