@@ -1,0 +1,78 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: biowatch-paper-ingested-v1
+  labels:
+    strimzi.io/cluster: biowatch-kafka
+spec:
+  topicName: biowatch.paper.ingested.v1
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 134217728
+    cleanup.policy: delete
+
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: biowatch-paper-indexed-v1
+  labels:
+    strimzi.io/cluster: biowatch-kafka
+spec:
+  topicName: biowatch.paper.indexed.v1
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 134217728
+    cleanup.policy: delete
+
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: biowatch-summary-requested-v1
+  labels:
+    strimzi.io/cluster: biowatch-kafka
+spec:
+  topicName: biowatch.summary.requested.v1
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 134217728
+    cleanup.policy: delete
+
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: biowatch-summary-generated-v1
+  labels:
+    strimzi.io/cluster: biowatch-kafka
+spec:
+  topicName: biowatch.summary.generated.v1
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 134217728
+    cleanup.policy: delete
+
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: biowatch-dead-letter-v1
+  labels:
+    strimzi.io/cluster: biowatch-kafka
+spec:
+  topicName: biowatch.dead-letter.v1
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 2592000000
+    segment.bytes: 134217728
+    cleanup.policy: delete
