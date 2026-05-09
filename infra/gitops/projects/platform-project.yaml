@@ -8,6 +8,7 @@ spec:
 
   sourceRepos:
     - https://github.com/mbaimuratov/biowatch.git
+    - https://strimzi.io/charts/
 
   destinations:
     - namespace: strimzi-system
