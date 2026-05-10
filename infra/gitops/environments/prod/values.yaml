@@ -5,6 +5,10 @@ image:
 
 app:
   environment: production
+  kafka:
+    enabled: true
+    bootstrapServers: biowatch-kafka-kafka-bootstrap.kafka-prod.svc.cluster.local:9092
+    clientId: biowatch-prod
 
 secret:
   create: false
@@ -62,6 +66,10 @@ scheduler:
   enabled: true
   replicaCount: 1
   intervalSeconds: 60
+
+outboxPublisher:
+  enabled: true
+  replicaCount: 1
 
 postgres:
   persistence:

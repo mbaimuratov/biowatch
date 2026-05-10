@@ -11,6 +11,7 @@ The Mac workstation is used only for one-time bootstrap and Git changes.
 - ingress-nginx: exposes HTTP and HTTPS on the VM IP.
 - Argo CD: reconciles BioWatch from Git.
 - Sealed Secrets: stores encrypted Kubernetes Secret manifests in Git.
+- Strimzi/Kafka: receives BioWatch domain events from the outbox publisher.
 - GHCR: stores multi-arch BioWatch app images.
 - BioWatch Helm chart: rendered by Argo CD from `infra/helm/biowatch`.
 
@@ -98,6 +99,19 @@ argocd app get biowatch-prod --grpc-web
 kubectl get pods -n biowatch-prod
 curl -H "Host: biowatch.local" http://192.168.106.3/health
 ```
+
+BioWatch publishes paper ingestion events through the outbox publisher
+Deployment. Production values enable Kafka with:
+
+```text
+BIOWATCH_KAFKA_ENABLED=true
+BIOWATCH_KAFKA_BOOTSTRAP_SERVERS=biowatch-kafka-kafka-bootstrap.kafka-prod.svc.cluster.local:9092
+BIOWATCH_KAFKA_CLIENT_ID=biowatch-prod
+```
+
+The publisher reads pending rows from `event_outbox`, publishes them to
+`biowatch.paper.ingested.v1`, and records `published_at` or retry metadata on
+the row.
 
 Useful Kubernetes checks:
 

@@ -3,6 +3,13 @@ from functools import lru_cache
 from os import getenv
 
 
+def _get_bool(name: str, default: bool) -> bool:
+    value = getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str = "BioWatch"
@@ -28,6 +35,9 @@ class Settings:
     delivery_prepare_offset_minutes: int = 30
     delivery_prepare_summary_timeout_seconds: float = 1500.0
     pubmed_base_url: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    kafka_enabled: bool = False
+    kafka_bootstrap_servers: str = ""
+    kafka_client_id: str = "biowatch"
 
 
 @lru_cache
@@ -112,4 +122,10 @@ def get_settings() -> Settings:
             )
         ),
         pubmed_base_url=getenv("BIOWATCH_PUBMED_BASE_URL", Settings.pubmed_base_url),
+        kafka_enabled=_get_bool("BIOWATCH_KAFKA_ENABLED", Settings.kafka_enabled),
+        kafka_bootstrap_servers=getenv(
+            "BIOWATCH_KAFKA_BOOTSTRAP_SERVERS",
+            Settings.kafka_bootstrap_servers,
+        ),
+        kafka_client_id=getenv("BIOWATCH_KAFKA_CLIENT_ID", Settings.kafka_client_id),
     )

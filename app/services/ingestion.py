@@ -7,7 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.europe_pmc import EuropePMCClient
-from app.models import IngestionRun, Paper, Topic, TopicPaper
+from app.events.papers import (
+    PAPER_INGESTED_EVENT_TYPE,
+    PAPER_INGESTED_TOPIC,
+    build_paper_ingested_payload,
+    paper_ingested_key,
+)
+from app.models import EventOutbox, IngestionRun, Paper, Topic, TopicPaper
 from app.search.client import PaperSearchClient
 
 EUROPE_PMC_SOURCE = "europe_pmc"
@@ -94,7 +100,9 @@ async def process_ingestion_run(
         search_response = await client.search(topic.query, page_size=topic.max_papers_per_run)
         payloads = _normalize_search_response(search_response)
         for payload in payloads:
-            paper = await _upsert_paper(session, payload)
+            paper, is_new = await _upsert_paper(session, payload)
+            if is_new:
+                _add_paper_ingested_event(session, paper)
             await _match_topic_to_paper(session, topic, paper)
             indexed_papers.append(paper)
 
@@ -195,7 +203,7 @@ def _parse_date_text(value: str | None) -> date | None:
         return None
 
 
-async def _upsert_paper(session: AsyncSession, payload: dict[str, Any]) -> Paper:
+async def _upsert_paper(session: AsyncSession, payload: dict[str, Any]) -> tuple[Paper, bool]:
     paper = await session.scalar(
         select(Paper).where(
             Paper.source == payload["source"],
@@ -206,12 +214,23 @@ async def _upsert_paper(session: AsyncSession, payload: dict[str, Any]) -> Paper
         paper = Paper(**payload)
         session.add(paper)
         await session.flush()
-        return paper
+        return paper, True
 
     for field, value in payload.items():
         setattr(paper, field, value)
     await session.flush()
-    return paper
+    return paper, False
+
+
+def _add_paper_ingested_event(session: AsyncSession, paper: Paper) -> None:
+    session.add(
+        EventOutbox(
+            event_type=PAPER_INGESTED_EVENT_TYPE,
+            topic=PAPER_INGESTED_TOPIC,
+            key=paper_ingested_key(paper),
+            payload=build_paper_ingested_payload(paper),
+        )
+    )
 
 
 async def _match_topic_to_paper(session: AsyncSession, topic: Topic, paper: Paper) -> None:
