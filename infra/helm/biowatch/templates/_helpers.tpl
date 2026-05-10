@@ -83,6 +83,12 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.app.deliveryPrepareOffsetMinutes | quote }}
 - name: BIOWATCH_DELIVERY_PREPARE_SUMMARY_TIMEOUT_SECONDS
   value: {{ .Values.app.deliveryPrepareSummaryTimeoutSeconds | quote }}
+- name: BIOWATCH_KAFKA_ENABLED
+  value: {{ .Values.app.kafka.enabled | quote }}
+- name: BIOWATCH_KAFKA_BOOTSTRAP_SERVERS
+  value: {{ .Values.app.kafka.bootstrapServers | quote }}
+- name: BIOWATCH_KAFKA_CLIENT_ID
+  value: {{ .Values.app.kafka.clientId | quote }}
 - name: BIOWATCH_DATABASE_URL
   valueFrom:
     secretKeyRef:
