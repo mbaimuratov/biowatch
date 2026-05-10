@@ -94,6 +94,21 @@ export BIOWATCH_KAFKA_CLIENT_ID='biowatch-local'
 python -m app.jobs.outbox_publisher
 ```
 
+The first Kafka consumer is the paper indexer. It reads
+`biowatch.paper.ingested.v1` with consumer group `biowatch-indexer`, loads the
+paper from Postgres, upserts it into Elasticsearch using the paper id as the
+stable document id, and commits the Kafka offset only after indexing succeeds.
+
+Run it locally with Kafka enabled:
+
+```sh
+export BIOWATCH_KAFKA_ENABLED=true
+export BIOWATCH_KAFKA_BOOTSTRAP_SERVERS='localhost:9092'
+export BIOWATCH_KAFKA_INDEXER_TOPIC='biowatch.paper.ingested.v1'
+export BIOWATCH_KAFKA_INDEXER_GROUP_ID='biowatch-indexer'
+make indexer-consumer
+```
+
 ## Development Commands
 
 ```sh
@@ -105,6 +120,7 @@ make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
 make outbox-publisher # publish pending outbox events to Kafka
+make indexer-consumer # index paper.ingested Kafka events into Elasticsearch
 make scheduler  # enqueue due Telegram morning deliveries
 make bot        # run the Telegram bot with long polling
 make k8s-dry-run
