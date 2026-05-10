@@ -89,6 +89,10 @@ app.kubernetes.io/component: {{ .component }}
   value: {{ .Values.app.kafka.bootstrapServers | quote }}
 - name: BIOWATCH_KAFKA_CLIENT_ID
   value: {{ .Values.app.kafka.clientId | quote }}
+- name: BIOWATCH_KAFKA_INDEXER_TOPIC
+  value: {{ .Values.app.kafka.indexerTopic | quote }}
+- name: BIOWATCH_KAFKA_INDEXER_GROUP_ID
+  value: {{ .Values.app.kafka.indexerGroupId | quote }}
 - name: BIOWATCH_DATABASE_URL
   valueFrom:
     secretKeyRef:

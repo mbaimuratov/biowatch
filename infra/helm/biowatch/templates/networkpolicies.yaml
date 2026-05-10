@@ -110,6 +110,7 @@ spec:
           - bot
           - scheduler
           - outbox-publisher
+          - indexer-consumer
           - migration
   policyTypes:
     - Egress
