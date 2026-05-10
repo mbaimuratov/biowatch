@@ -109,6 +109,7 @@ spec:
           - summary-worker
           - bot
           - scheduler
+          - outbox-publisher
           - migration
   policyTypes:
     - Egress
@@ -134,6 +135,13 @@ spec:
       ports:
         - protocol: TCP
           port: 9200
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.kafkaNamespace | quote }}
+      ports:
+        - protocol: TCP
+          port: 9092
     - to:
         - namespaceSelector:
             matchLabels:

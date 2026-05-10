@@ -20,6 +20,10 @@ app:
   summaryWaitTimeoutSeconds: "15.0"
   deliveryPrepareOffsetMinutes: "30"
   deliveryPrepareSummaryTimeoutSeconds: "1500.0"
+  kafka:
+    enabled: false
+    bootstrapServers: ""
+    clientId: biowatch
 
 observability:
   prometheus:
@@ -113,6 +117,17 @@ scheduler:
       cpu: 250m
       memory: 256Mi
 
+outboxPublisher:
+  enabled: false
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
 migration:
   enabled: true
   resources:
@@ -182,6 +197,7 @@ ingress:
 networkPolicy:
   enabled: true
   ingressNamespace: ingress-nginx
+  kafkaNamespace: kafka-prod
 
 tests:
   image:

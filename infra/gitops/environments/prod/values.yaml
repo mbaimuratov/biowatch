@@ -1,10 +1,14 @@
 image:
   repository: ghcr.io/mbaimuratov/biowatch
-  tag: 214405a030a33461bf863867df64d85352ae3570
+  tag: c0df6be3e15a9027e3d69394ddd40718fba5768d
   pullPolicy: IfNotPresent
 
 app:
   environment: production
+  kafka:
+    enabled: true
+    bootstrapServers: biowatch-kafka-kafka-bootstrap.kafka-prod.svc.cluster.local:9092
+    clientId: biowatch-prod
 
 secret:
   create: false
@@ -62,6 +66,10 @@ scheduler:
   enabled: true
   replicaCount: 1
   intervalSeconds: 60
+
+outboxPublisher:
+  enabled: true
+  replicaCount: 1
 
 postgres:
   persistence:

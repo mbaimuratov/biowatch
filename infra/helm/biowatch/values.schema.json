@@ -37,7 +37,15 @@
         "summaryPromptVersion": { "type": "string" },
         "summaryWaitTimeoutSeconds": { "type": "string" },
         "deliveryPrepareOffsetMinutes": { "type": "string" },
-        "deliveryPrepareSummaryTimeoutSeconds": { "type": "string" }
+        "deliveryPrepareSummaryTimeoutSeconds": { "type": "string" },
+        "kafka": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "bootstrapServers": { "type": "string" },
+            "clientId": { "type": "string" }
+          }
+        }
       }
     },
     "api": {
@@ -86,6 +94,13 @@
         "intervalSeconds": { "type": "integer", "minimum": 1 }
       }
     },
+    "outboxPublisher": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 }
+      }
+    },
     "observability": {
       "type": "object",
       "properties": {
@@ -110,7 +125,8 @@
       "type": "object",
       "properties": {
         "enabled": { "type": "boolean" },
-        "ingressNamespace": { "type": "string" }
+        "ingressNamespace": { "type": "string" },
+        "kafkaNamespace": { "type": "string" }
       }
     }
   }
