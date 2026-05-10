@@ -55,6 +55,7 @@ def test_paper_ingested_event_schema() -> None:
     payload = build_paper_ingested_payload(paper)
 
     assert payload == {
+        "event_id": "paper.ingested.v1:42",
         "event_type": PAPER_INGESTED_EVENT_TYPE,
         "event_version": PAPER_INGESTED_EVENT_VERSION,
         "paper": {

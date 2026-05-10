@@ -11,6 +11,9 @@ rules: []
 {{- if .Values.outboxPublisher.enabled }}
 {{- $components = append $components "outbox-publisher" }}
 {{- end }}
+{{- if .Values.indexerConsumer.enabled }}
+{{- $components = append $components "indexer-consumer" }}
+{{- end }}
 {{- $components = append $components "migration" }}
 {{- range $component := $components }}
 apiVersion: rbac.authorization.k8s.io/v1

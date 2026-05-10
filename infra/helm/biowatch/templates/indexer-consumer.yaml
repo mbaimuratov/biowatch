@@ -1,0 +1,31 @@
+{{- if .Values.indexerConsumer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biowatch.fullname" . }}-indexer-consumer
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "indexer-consumer") | nindent 4 }}
+spec:
+  replicas: {{ .Values.indexerConsumer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "indexer-consumer") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "indexer-consumer") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "indexer-consumer") }}
+      containers:
+        - name: indexer-consumer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.jobs.indexer_consumer
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.indexerConsumer.resources | nindent 12 }}
+{{- end }}

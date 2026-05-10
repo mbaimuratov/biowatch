@@ -107,11 +107,18 @@ Deployment. Production values enable Kafka with:
 BIOWATCH_KAFKA_ENABLED=true
 BIOWATCH_KAFKA_BOOTSTRAP_SERVERS=biowatch-kafka-kafka-bootstrap.kafka-prod.svc.cluster.local:9092
 BIOWATCH_KAFKA_CLIENT_ID=biowatch-prod
+BIOWATCH_KAFKA_INDEXER_TOPIC=biowatch.paper.ingested.v1
+BIOWATCH_KAFKA_INDEXER_GROUP_ID=biowatch-indexer
 ```
 
 The publisher reads pending rows from `event_outbox`, publishes them to
 `biowatch.paper.ingested.v1`, and records `published_at` or retry metadata on
 the row.
+
+The indexer consumer Deployment reads `biowatch.paper.ingested.v1`, loads each
+paper from Postgres, upserts it into Elasticsearch with the paper id as the
+document id, and commits Kafka offsets only after Elasticsearch indexing
+succeeds. Production keeps this consumer at one replica.
 
 Useful Kubernetes checks:
 

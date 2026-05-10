@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/mbaimuratov/biowatch
-  tag: c0df6be3e15a9027e3d69394ddd40718fba5768d
+  tag: 2e4aa2d606284a09e80bb362e5c1421760fbe65f
   pullPolicy: IfNotPresent
 
 app:
@@ -9,6 +9,8 @@ app:
     enabled: true
     bootstrapServers: biowatch-kafka-kafka-bootstrap.kafka-prod.svc.cluster.local:9092
     clientId: biowatch-prod
+    indexerTopic: biowatch.paper.ingested.v1
+    indexerGroupId: biowatch-indexer
 
 secret:
   create: false
@@ -70,6 +72,17 @@ scheduler:
 outboxPublisher:
   enabled: true
   replicaCount: 1
+
+indexerConsumer:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
 
 postgres:
   persistence:
