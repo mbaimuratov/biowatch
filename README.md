@@ -79,6 +79,21 @@ Prometheus:     http://127.0.0.1:9090
 Grafana:        http://127.0.0.1:3000
 ```
 
+Kafka integration uses the transactional outbox pattern. New papers inserted by
+ingestion create `event_outbox` rows in the same Postgres transaction; the
+outbox publisher process later publishes pending events to Kafka and marks them
+published. This avoids publishing directly from API routes or ingestion request
+paths.
+
+Kafka is disabled by default for local development. Enable it with:
+
+```sh
+export BIOWATCH_KAFKA_ENABLED=true
+export BIOWATCH_KAFKA_BOOTSTRAP_SERVERS='localhost:9092'
+export BIOWATCH_KAFKA_CLIENT_ID='biowatch-local'
+python -m app.jobs.outbox_publisher
+```
+
 ## Development Commands
 
 ```sh
@@ -89,6 +104,7 @@ make compose-up # start PostgreSQL, Redis, Elasticsearch, API, worker, scheduler
 make compose-down
 make db-migrate # apply Alembic migrations
 make worker     # run a local RQ worker with metrics against local Redis
+make outbox-publisher # publish pending outbox events to Kafka
 make scheduler  # enqueue due Telegram morning deliveries
 make bot        # run the Telegram bot with long polling
 make k8s-dry-run
@@ -210,6 +226,14 @@ POST /telegram/deliveries/{delivery_id}/retry
 GET  /topics/{topic_id}/papers
 GET  /papers/search?q=...
 GET  /ingestion-runs
+```
+
+The first Kafka event published by BioWatch is:
+
+```text
+topic: biowatch.paper.ingested.v1
+event_type: paper.ingested
+event_version: 1
 ```
 
 Create a topic:

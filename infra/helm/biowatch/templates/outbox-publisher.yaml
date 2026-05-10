@@ -1,0 +1,31 @@
+{{- if .Values.outboxPublisher.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "biowatch.fullname" . }}-outbox-publisher
+  labels:
+    {{- include "biowatch.componentLabels" (dict "root" . "component" "outbox-publisher") | nindent 4 }}
+spec:
+  replicas: {{ .Values.outboxPublisher.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "biowatch.selectorLabels" (dict "root" . "component" "outbox-publisher") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "biowatch.selectorLabels" (dict "root" . "component" "outbox-publisher") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "biowatch.serviceAccountName" (dict "root" . "component" "outbox-publisher") }}
+      containers:
+        - name: outbox-publisher
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - app.jobs.outbox_publisher
+          env:
+            {{- include "biowatch.appEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.outboxPublisher.resources | nindent 12 }}
+{{- end }}
