@@ -2,7 +2,7 @@ PYTHON ?= python3.12
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: install run worker summary-worker outbox-publisher scheduler bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template prod-bootstrap prod-seal-secret prod-argocd-login-help prod-status
+.PHONY: install run worker summary-worker outbox-publisher indexer-consumer scheduler bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template prod-bootstrap prod-seal-secret prod-argocd-login-help prod-status
 
 install:
 	$(PYTHON) -m venv $(VENV)
@@ -20,6 +20,9 @@ summary-worker:
 
 outbox-publisher:
 	$(BIN)/python -m app.jobs.outbox_publisher
+
+indexer-consumer:
+	$(BIN)/python -m app.jobs.indexer_consumer
 
 scheduler:
 	$(BIN)/python -m app.jobs.scheduler

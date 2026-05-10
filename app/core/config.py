@@ -38,6 +38,8 @@ class Settings:
     kafka_enabled: bool = False
     kafka_bootstrap_servers: str = ""
     kafka_client_id: str = "biowatch"
+    kafka_indexer_topic: str = "biowatch.paper.ingested.v1"
+    kafka_indexer_group_id: str = "biowatch-indexer"
 
 
 @lru_cache
@@ -128,4 +130,12 @@ def get_settings() -> Settings:
             Settings.kafka_bootstrap_servers,
         ),
         kafka_client_id=getenv("BIOWATCH_KAFKA_CLIENT_ID", Settings.kafka_client_id),
+        kafka_indexer_topic=getenv(
+            "BIOWATCH_KAFKA_INDEXER_TOPIC",
+            Settings.kafka_indexer_topic,
+        ),
+        kafka_indexer_group_id=getenv(
+            "BIOWATCH_KAFKA_INDEXER_GROUP_ID",
+            Settings.kafka_indexer_group_id,
+        ),
     )

@@ -53,6 +53,9 @@ class PaperSearchClient:
         except (ApiError, TransportError) as exc:
             raise SearchError("Failed to index papers in Elasticsearch") from exc
 
+    async def index_paper(self, paper: Paper) -> None:
+        await self.index_papers([paper])
+
     async def search_papers(self, query: str, size: int = 25) -> list[int]:
         try:
             await self._ensure_index()
