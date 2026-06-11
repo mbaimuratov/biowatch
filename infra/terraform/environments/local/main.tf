@@ -56,3 +56,54 @@ resource "docker_container" "prometheus" {
     local_file.prometheus_config
   ]
 }
+
+resource "local_file" "grafana_datasource" {
+  filename = "${path.module}/generated/grafana/provisioning/datasources/prometheus.yml"
+
+  content = <<EOF
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://biowatch-tf-prometheus:9090
+    isDefault: true
+    editable: true
+EOF
+}
+
+resource "docker_image" "grafana" {
+  name = "grafana/grafana:11.4.0"
+}
+
+resource "docker_container" "grafana" {
+  name  = "biowatch-tf-grafana"
+  image = docker_image.grafana.image_id
+
+  ports {
+    internal = 3000
+    external = 13000
+  }
+
+  env = [
+    "GF_SECURITY_ADMIN_USER=admin",
+    "GF_SECURITY_ADMIN_PASSWORD=admin",
+    "GF_USERS_ALLOW_SIGN_UP=false"
+  ]
+
+  volumes {
+    host_path      = abspath("${path.module}/generated/grafana/provisioning")
+    container_path = "/etc/grafana/provisioning"
+    read_only      = true
+  }
+
+  networks_advanced {
+    name = docker_network.private_network.name
+  }
+
+  depends_on = [
+    docker_container.prometheus,
+    local_file.grafana_datasource
+  ]
+}
