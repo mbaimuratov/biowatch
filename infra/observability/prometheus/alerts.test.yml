@@ -1,0 +1,36 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'biowatch_api_request_errors_total{method="GET",path="/topics"}'
+        values: '0+10x11'
+      - series: 'biowatch_api_requests_total{method="GET",path="/topics",status="500"}'
+        values: '0+10x11'
+      - series: 'biowatch_api_requests_total{method="GET",path="/health",status="200"}'
+        values: '0+100x11'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighApiErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: High API error rate
+              description: API error rate is above 5% for 5 minutes.
+
+  - interval: 1m
+    input_series:
+      - series: 'biowatch_api_request_errors_total{method="GET",path="/topics"}'
+        values: '0+1x11'
+      - series: 'biowatch_api_requests_total{method="GET",path="/topics",status="500"}'
+        values: '0+1x11'
+      - series: 'biowatch_api_requests_total{method="GET",path="/health",status="200"}'
+        values: '0+100x11'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighApiErrorRate
+        exp_alerts: []

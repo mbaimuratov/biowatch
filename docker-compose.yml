@@ -180,6 +180,18 @@ services:
       - api
       - worker
       - summary-worker
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/observability/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -199,4 +211,5 @@ volumes:
   postgres_data:
   elasticsearch_data:
   prometheus_data:
+  alertmanager_data:
   grafana_data:
