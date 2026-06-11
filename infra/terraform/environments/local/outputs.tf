@@ -1,0 +1,9 @@
+output "project_name" {
+  description = "Project name for the local Terraform environment."
+  value       = var.project_name
+}
+
+output "environment" {
+  description = "Environment name for this Terraform configuration."
+  value       = var.environment
+}
