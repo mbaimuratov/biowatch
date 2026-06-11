@@ -36,6 +36,9 @@ jobs:
       - name: Run pytest
         run: pytest
 
+      - name: Validate Prometheus alerts
+        run: make prometheus-test
+
   helm:
     name: Helm validation
     runs-on: ubuntu-latest
