@@ -7,3 +7,7 @@ output "environment" {
   description = "Environment name for this Terraform configuration."
   value       = var.environment
 }
+
+output "prometheus_url" {
+  value = "http://localhost:9090"
+}
