@@ -174,6 +174,7 @@ services:
       - "9090:9090"
     volumes:
       - ./infra/observability/prometheus/local.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     depends_on:
       - api

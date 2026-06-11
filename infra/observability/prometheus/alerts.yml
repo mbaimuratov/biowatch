@@ -1,0 +1,16 @@
+groups:
+  - name: biowatch-api
+    rules:
+      - alert: HighApiErrorRate
+        expr: |
+          100 *
+          sum(rate(biowatch_api_request_errors_total[5m]))
+          /
+          clamp_min(sum(rate(biowatch_api_requests_total[5m])), 0.001)
+          > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is above 5% for 5 minutes."
