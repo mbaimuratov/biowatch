@@ -2,7 +2,7 @@ PYTHON ?= python3.12
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: install run worker summary-worker outbox-publisher indexer-consumer scheduler bot test lint format compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template prod-bootstrap prod-seal-secret prod-argocd-login-help prod-status
+.PHONY: install run worker summary-worker outbox-publisher indexer-consumer scheduler bot test lint format prometheus-test compose-up compose-down db-migrate db-revision k8s-dry-run helm-lint helm-template prod-bootstrap prod-seal-secret prod-argocd-login-help prod-status
 
 install:
 	$(PYTHON) -m venv $(VENV)
@@ -39,8 +39,27 @@ lint:
 format:
 	$(BIN)/ruff format .
 
+prometheus-test:
+	docker run --rm \
+		-v "$$(pwd)/infra/observability/prometheus:/etc/prometheus:ro" \
+		--workdir /etc/prometheus \
+		--entrypoint promtool \
+		prom/prometheus:v3.0.1 \
+		check config local.yml
+	docker run --rm \
+		-v "$$(pwd)/infra/observability/prometheus:/etc/prometheus:ro" \
+		--workdir /etc/prometheus \
+		--entrypoint promtool \
+		prom/prometheus:v3.0.1 \
+		test rules alerts.test.yml
+	docker run --rm \
+		-v "$$(pwd)/infra/observability/prometheus:/etc/alertmanager:ro" \
+		--entrypoint amtool \
+		prom/alertmanager:v0.28.0 \
+		check-config /etc/alertmanager/alertmanager.yml
+
 compose-up:
-	docker compose up -d postgres redis elasticsearch api worker summary-worker scheduler bot prometheus grafana
+	docker compose up -d postgres redis elasticsearch api worker summary-worker scheduler bot prometheus alertmanager grafana
 
 compose-down:
 	docker compose down
