@@ -11,6 +11,9 @@ alerting:
         - targets:
             - localhost:9093
 
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   - job_name: biowatch-api
     metrics_path: /metrics
