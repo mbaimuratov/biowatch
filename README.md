@@ -364,8 +364,8 @@ docker compose logs -f worker
 
 BioWatch exposes Prometheus metrics and JSON structured logs for the API and
 worker. The API serves `/metrics`; the worker serves metrics on port `9100`.
-Docker Compose also starts Prometheus and Grafana with a preloaded BioWatch
-dashboard.
+Docker Compose also starts Prometheus, Alertmanager, and Grafana with a
+preloaded BioWatch dashboard.
 
 Start the local observability stack:
 
@@ -384,10 +384,17 @@ Open Prometheus and Grafana:
 
 ```text
 http://127.0.0.1:9090
+http://127.0.0.1:9093
 http://127.0.0.1:3000
 ```
 
 Grafana local credentials are `admin` / `admin`.
+
+Validate the local Prometheus config and alert rule tests:
+
+```sh
+make prometheus-test
+```
 
 Useful Prometheus queries:
 
