@@ -56,7 +56,7 @@ echo "== Applying Argo CD project =="
 kubectl apply -f "$ROOT_DIR/infra/gitops/projects/biowatch-project.yaml"
 
 echo "== Bootstrapping root app =="
-kubectl apply -f "$ROOT_DIR/infra/gitops/root/root-app.yaml"
+kubectl apply -f "$ROOT_DIR/infra/gitops/root/root-app-prod.yaml"
 
 echo "== Final status =="
 kubectl get pods -A

@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kafka-dev
+  namespace: argocd
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/mbaimuratov/biowatch.git
+    targetRevision: main
+    path: infra/gitops/kafka/dev
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kafka-dev
+
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
