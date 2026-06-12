@@ -22,6 +22,15 @@ resource "local_file" "prometheus_config" {
 global:
   scrape_interval: 15s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "biowatch-tf-alertmanager:9093"
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   - job_name: "prometheus"
     static_configs:
@@ -48,12 +57,20 @@ resource "docker_container" "prometheus" {
     read_only      = true
   }
 
+  volumes {
+    host_path      = abspath(local_file.prometheus_alerts.filename)
+    container_path = "/etc/prometheus/alerts.yml"
+    read_only      = true
+  }
+
   networks_advanced {
     name = docker_network.private_network.name
   }
 
   depends_on = [
-    local_file.prometheus_config
+    local_file.prometheus_config,
+    local_file.prometheus_alerts,
+    docker_container.alertmanager
   ]
 }
 
@@ -106,4 +123,73 @@ resource "docker_container" "grafana" {
     docker_container.prometheus,
     local_file.grafana_datasource
   ]
+}
+
+resource "local_file" "alertmanager_config" {
+  filename = "${path.module}/generated/alertmanager/alertmanager.yml"
+
+  content = <<EOF
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: "default"
+  group_by: ["alertname", "severity"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+
+receivers:
+  - name: "default"
+EOF
+}
+
+resource "docker_image" "alertmanager" {
+  name = "prom/alertmanager:v0.27.0"
+}
+
+resource "docker_container" "alertmanager" {
+  name  = "biowatch-tf-alertmanager"
+  image = docker_image.alertmanager.image_id
+
+  ports {
+    internal = 9093
+    external = 19093
+  }
+
+  volumes {
+    host_path      = abspath(local_file.alertmanager_config.filename)
+    container_path = "/etc/alertmanager/alertmanager.yml"
+    read_only      = true
+  }
+
+  command = [
+    "--config.file=/etc/alertmanager/alertmanager.yml"
+  ]
+
+  networks_advanced {
+    name = docker_network.private_network.name
+  }
+
+  depends_on = [
+    local_file.alertmanager_config
+  ]
+}
+
+resource "local_file" "prometheus_alerts" {
+  filename = "${path.module}/generated/alerts.yml"
+
+  content = <<EOF
+groups:
+  - name: local-test
+    rules:
+      - alert: PrometheusAlwaysFiring
+        expr: vector(1)
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Test alert is firing"
+          description: "This alert always fires locally to verify Prometheus -> Alertmanager wiring."
+EOF
 }

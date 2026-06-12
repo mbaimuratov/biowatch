@@ -16,6 +16,6 @@ output "grafana_url" {
   value = "http://localhost:13000"
 }
 
-output "grafana_login" {
-  value = "admin / admin"
+output "alertmanager_url" {
+  value = "http://localhost:19093"
 }
