@@ -6,15 +6,6 @@ locals {
   }
 }
 
-resource "local_file" "terraform_readme" {
-  filename = "${path.module}/generated/terraform-managed.txt"
-  content  = "Managed by Terraform\n"
-}
-
-resource "docker_network" "private_network" {
-  name = "biowatch-tf-monitoring"
-}
-
 resource "local_file" "prometheus_config" {
   filename = "${path.module}/generated/prometheus.yml"
 
@@ -38,42 +29,6 @@ scrape_configs:
 EOF
 }
 
-resource "docker_image" "prometheus" {
-  name = "prom/prometheus:v3.0.1"
-}
-
-resource "docker_container" "prometheus" {
-  name  = "biowatch-tf-prometheus"
-  image = docker_image.prometheus.image_id
-
-  ports {
-    internal = 9090
-    external = 9090
-  }
-
-  volumes {
-    host_path      = abspath(local_file.prometheus_config.filename)
-    container_path = "/etc/prometheus/prometheus.yml"
-    read_only      = true
-  }
-
-  volumes {
-    host_path      = abspath(local_file.prometheus_alerts.filename)
-    container_path = "/etc/prometheus/alerts.yml"
-    read_only      = true
-  }
-
-  networks_advanced {
-    name = docker_network.private_network.name
-  }
-
-  depends_on = [
-    local_file.prometheus_config,
-    local_file.prometheus_alerts,
-    docker_container.alertmanager
-  ]
-}
-
 resource "local_file" "grafana_datasource" {
   filename = "${path.module}/generated/grafana/provisioning/datasources/prometheus.yml"
 
@@ -88,41 +43,6 @@ datasources:
     isDefault: true
     editable: true
 EOF
-}
-
-resource "docker_image" "grafana" {
-  name = "grafana/grafana:11.4.0"
-}
-
-resource "docker_container" "grafana" {
-  name  = "biowatch-tf-grafana"
-  image = docker_image.grafana.image_id
-
-  ports {
-    internal = 3000
-    external = 13000
-  }
-
-  env = [
-    "GF_SECURITY_ADMIN_USER=admin",
-    "GF_SECURITY_ADMIN_PASSWORD=admin",
-    "GF_USERS_ALLOW_SIGN_UP=false"
-  ]
-
-  volumes {
-    host_path      = abspath("${path.module}/generated/grafana/provisioning")
-    container_path = "/etc/grafana/provisioning"
-    read_only      = true
-  }
-
-  networks_advanced {
-    name = docker_network.private_network.name
-  }
-
-  depends_on = [
-    docker_container.prometheus,
-    local_file.grafana_datasource
-  ]
 }
 
 resource "local_file" "alertmanager_config" {
@@ -144,38 +64,6 @@ receivers:
 EOF
 }
 
-resource "docker_image" "alertmanager" {
-  name = "prom/alertmanager:v0.27.0"
-}
-
-resource "docker_container" "alertmanager" {
-  name  = "biowatch-tf-alertmanager"
-  image = docker_image.alertmanager.image_id
-
-  ports {
-    internal = 9093
-    external = 19093
-  }
-
-  volumes {
-    host_path      = abspath(local_file.alertmanager_config.filename)
-    container_path = "/etc/alertmanager/alertmanager.yml"
-    read_only      = true
-  }
-
-  command = [
-    "--config.file=/etc/alertmanager/alertmanager.yml"
-  ]
-
-  networks_advanced {
-    name = docker_network.private_network.name
-  }
-
-  depends_on = [
-    local_file.alertmanager_config
-  ]
-}
-
 resource "local_file" "prometheus_alerts" {
   filename = "${path.module}/generated/alerts.yml"
 
@@ -192,4 +80,109 @@ groups:
           summary: "Test alert is firing"
           description: "This alert always fires locally to verify Prometheus -> Alertmanager wiring."
 EOF
+}
+
+module "monitoring_network" {
+  source = "../../modules/docker-network"
+
+  name = "biowatch-tf-monitoring"
+}
+
+module "prometheus" {
+  source = "../../modules/docker-container"
+
+  name         = "biowatch-tf-prometheus"
+  image        = "prom/prometheus:v3.0.1"
+  network_name = module.monitoring_network.name
+
+  ports = [
+    {
+      internal = 9090
+      external = 9090
+    }
+  ]
+
+  volumes = [
+    {
+      host_path      = abspath(local_file.prometheus_config.filename)
+      container_path = "/etc/prometheus/prometheus.yml"
+      read_only      = true
+    },
+    {
+      host_path      = abspath(local_file.prometheus_alerts.filename)
+      container_path = "/etc/prometheus/alerts.yml"
+      read_only      = true
+    }
+  ]
+
+  depends_on = [
+    module.alertmanager,
+    local_file.prometheus_config,
+    local_file.prometheus_alerts
+  ]
+}
+
+module "grafana" {
+  source = "../../modules/docker-container"
+
+  name         = "biowatch-tf-grafana"
+  image        = "grafana/grafana:11.4.0"
+  network_name = module.monitoring_network.name
+
+  ports = [
+    {
+      internal = 3000
+      external = 13000
+    }
+  ]
+
+  env = [
+    "GF_SECURITY_ADMIN_USER=admin",
+    "GF_SECURITY_ADMIN_PASSWORD=admin",
+    "GF_USERS_ALLOW_SIGN_UP=false"
+  ]
+
+  volumes = [
+    {
+      host_path      = abspath("${path.module}/generated/grafana/provisioning")
+      container_path = "/etc/grafana/provisioning"
+      read_only      = true
+    }
+  ]
+
+  depends_on = [
+    module.prometheus,
+    local_file.grafana_datasource
+  ]
+}
+
+module "alertmanager" {
+  source = "../../modules/docker-container"
+
+  name         = "biowatch-tf-alertmanager"
+  image        = "prom/alertmanager:v0.27.0"
+  network_name = module.monitoring_network.name
+
+  ports = [
+    {
+      internal = 9093
+      external = 19093
+    }
+  ]
+
+  volumes = [
+    {
+      host_path      = abspath(local_file.alertmanager_config.filename)
+      container_path = "/etc/alertmanager/alertmanager.yml"
+      read_only      = true
+    }
+  ]
+
+  command = [
+    "--config.file=/etc/alertmanager/alertmanager.yml"
+  ]
+
+  depends_on = [
+    local_file.alertmanager_config
+  ]
 }
