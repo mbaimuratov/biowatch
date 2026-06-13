@@ -16,14 +16,17 @@ secret:
   create: false
   existingSecret: biowatch-secret
 
-ingress:
+gateway:
   enabled: true
-  className: nginx
   host: biowatch.local
+  parentRefs:
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: web
 
 networkPolicy:
   enabled: true
-  ingressNamespace: ingress-nginx
+  ingressNamespace: traefik
 
 api:
   replicaCount: 1
