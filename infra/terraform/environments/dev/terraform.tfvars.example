@@ -1,0 +1,7 @@
+kubeconfig_path = "~/.kube/biowatch-vm.yaml"
+kube_context    = ""
+
+gateway_api_version = "v1.4.0"
+
+argocd_chart_version         = "PUT_PINNED_ARGOCD_CHART_VERSION"
+sealed_secrets_chart_version = "PUT_PINNED_SEALED_SECRETS_CHART_VERSION"
