@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: strimzi-operator
+  name: strimzi-operator-prod
   namespace: argocd
 spec:
   project: platform
