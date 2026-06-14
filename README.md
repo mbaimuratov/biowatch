@@ -490,20 +490,33 @@ Production uses Argo CD GitOps on the UTM k3s VM. See
 [docs/prod-gitops.md](docs/prod-gitops.md) for bootstrap, sealed secrets, and
 the `main` to `prod` image promotion flow.
 
-Create a local kind cluster with HTTP ingress mapped to `localhost:8080`:
+Create a local kind cluster with HTTP traffic mapped to `localhost:8080`:
 
 ```sh
 kind create cluster --name biowatch --config infra/kind/biowatch.yaml
 ```
 
-Install the NGINX ingress controller for kind:
+Install the Gateway API CRDs and Traefik Gateway controller for kind:
 
 ```sh
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.3/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx \
-  --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller \
-  --timeout=180s
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm upgrade --install traefik traefik/traefik \
+  --namespace traefik \
+  --create-namespace \
+  --version 40.3.0 \
+  --set providers.kubernetesGateway.enabled=true \
+  --set gateway.listeners.web.namespacePolicy.from=All \
+  --set deployment.kind=DaemonSet \
+  --set service.type=ClusterIP \
+  --set ports.web.hostPort=80 \
+  --set ports.websecure.hostPort=443 \
+  --set nodeSelector.ingress-ready=true \
+  --set 'tolerations[0].key=node-role.kubernetes.io/control-plane' \
+  --set 'tolerations[0].operator=Exists' \
+  --set 'tolerations[0].effect=NoSchedule'
+kubectl -n traefik rollout status daemonset/traefik --timeout=180s
 ```
 
 Build and load the local BioWatch image:
@@ -557,7 +570,7 @@ kubectl -n biowatch port-forward svc/biowatch-api 8000:8000
 curl http://127.0.0.1:8000/health
 ```
 
-Or use the Ingress:
+Or use the Gateway API route through Traefik:
 
 ```sh
 curl -H "Host: biowatch.local" http://127.0.0.1:8080/health
