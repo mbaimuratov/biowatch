@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/mbaimuratov/biowatch
-  tag: latest
-  pullPolicy: Always
+  tag: 6a8ca6a3445b233958f595e18d5cdd2003aec821
+  pullPolicy: IfNotPresent
 
 app:
   environment: development
@@ -16,14 +16,17 @@ secret:
   create: false
   existingSecret: biowatch-secret
 
-ingress:
+gateway:
   enabled: true
-  className: nginx
   host: biowatch-dev.local
+  parentRefs:
+    - name: traefik-gateway
+      namespace: kube-system
+      sectionName: web
 
 networkPolicy:
   enabled: true
-  ingressNamespace: ingress-nginx
+  ingressNamespace: kube-system
   kafkaNamespace: kafka-dev
 
 api:
@@ -41,7 +44,7 @@ summaryWorker:
     port: 9100
 
 bot:
-  enabled: true
+  enabled: false
   replicaCount: 1
 
 scheduler:
