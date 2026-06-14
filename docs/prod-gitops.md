@@ -8,7 +8,7 @@ The Mac workstation is used only for one-time bootstrap and Git changes.
 - Mac workstation: runs `kubectl`, `helm`, `kubeseal`, `argocd`, and Git.
 - UTM Ubuntu VM: hosts the k3s cluster at `192.168.106.3`.
 - k3s: production Kubernetes runtime.
-- ingress-nginx: exposes HTTP and HTTPS on the VM IP.
+- Traefik Gateway controller: exposes HTTP and HTTPS on the VM IP.
 - Argo CD: reconciles BioWatch from Git.
 - Sealed Secrets: stores encrypted Kubernetes Secret manifests in Git.
 - Strimzi/Kafka: receives BioWatch domain events from the outbox publisher.
@@ -57,7 +57,8 @@ Bootstrap the platform controllers and root GitOps entrypoint:
 
 The bootstrap script installs or upgrades:
 
-- `ingress-nginx`
+- Gateway API CRDs
+- `traefik`
 - `argocd`
 - `sealed-secrets`
 
@@ -72,7 +73,7 @@ deployed by Argo CD from Git after bootstrap.
 
 ## Argo CD Login
 
-Retrieve the initial admin password and login through nginx ingress:
+Retrieve the initial admin password and login through the Traefik Gateway route:
 
 ```sh
 export ARGOCD_PASSWORD="$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"

@@ -201,15 +201,17 @@ elasticsearch:
       cpu: "1"
       memory: 2Gi
 
-ingress:
+gateway:
   enabled: true
-  className: nginx
   host: biowatch.local
-  annotations: {}
+  parentRefs:
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: web
 
 networkPolicy:
   enabled: true
-  ingressNamespace: ingress-nginx
+  ingressNamespace: traefik
   kafkaNamespace: kafka-prod
 
 tests:

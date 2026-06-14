@@ -2,7 +2,7 @@ secret:
   create: false
   existingSecret: biowatch-secret
 
-ingress:
+gateway:
   enabled: true
   host: biowatch.local
 

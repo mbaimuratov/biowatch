@@ -5,6 +5,8 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/biowatch-utm-k3s.yaml}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SEALED_SECRET_FILE="$ROOT_DIR/infra/gitops/environments/prod/sealed-secret.yaml"
+GATEWAY_API_VERSION="v1.4.0"
+TRAEFIK_CHART_VERSION="40.3.0"
 
 echo "== Checking cluster access =="
 command -v kubectl >/dev/null || { echo "kubectl is required"; exit 1; }
@@ -12,15 +14,20 @@ command -v helm >/dev/null || { echo "helm is required"; exit 1; }
 kubectl version --client=true >/dev/null
 kubectl get nodes >/dev/null
 
-echo "== Installing ingress-nginx =="
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null
+echo "== Installing Gateway API CRDs =="
+kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+
+echo "== Installing Traefik Gateway controller =="
+helm repo add traefik https://traefik.github.io/charts >/dev/null
 helm repo update >/dev/null
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
+helm upgrade --install traefik traefik/traefik \
+  --namespace traefik \
   --create-namespace \
-  --version 4.11.3 \
-  --set controller.service.type=LoadBalancer
-kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=300s
+  --version "$TRAEFIK_CHART_VERSION" \
+  --set providers.kubernetesGateway.enabled=true \
+  --set gateway.listeners.web.namespacePolicy.from=All \
+  --set service.type=LoadBalancer
+kubectl -n traefik rollout status deploy/traefik --timeout=300s
 
 echo "== Installing Argo CD =="
 helm repo add argo https://argoproj.github.io/argo-helm >/dev/null
