@@ -1,0 +1,69 @@
+image:
+  repository: ghcr.io/mbaimuratov/biowatch
+  tag: latest
+  pullPolicy: Always
+
+app:
+  environment: development
+  kafka:
+    enabled: true
+    bootstrapServers: biowatch-kafka-kafka-bootstrap.kafka-dev.svc.cluster.local:9092
+    clientId: biowatch-dev
+    indexerTopic: biowatch.paper.ingested.v1
+    indexerGroupId: biowatch-indexer
+
+secret:
+  create: false
+  existingSecret: biowatch-secret
+
+ingress:
+  enabled: true
+  className: nginx
+  host: biowatch-dev.local
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: ingress-nginx
+  kafkaNamespace: kafka-dev
+
+api:
+  replicaCount: 1
+
+worker:
+  replicaCount: 1
+  metrics:
+    port: 9100
+
+summaryWorker:
+  enabled: true
+  replicaCount: 1
+  metrics:
+    port: 9100
+
+bot:
+  enabled: true
+  replicaCount: 1
+
+scheduler:
+  enabled: true
+  replicaCount: 1
+  intervalSeconds: 60
+
+outboxPublisher:
+  enabled: true
+  replicaCount: 1
+
+indexerConsumer:
+  enabled: true
+  replicaCount: 1
+
+postgres:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+elasticsearch:
+  javaOpts: -Xms512m -Xmx512m
+  persistence:
+    enabled: true
+    size: 2Gi

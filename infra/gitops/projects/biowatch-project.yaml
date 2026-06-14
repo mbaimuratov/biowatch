@@ -4,12 +4,14 @@ metadata:
   name: biowatch
   namespace: argocd
 spec:
-  description: BioWatch prod GitOps project
+  description: BioWatch GitOps project
 
   sourceRepos:
     - https://github.com/mbaimuratov/biowatch.git
 
   destinations:
+    - namespace: biowatch-dev
+      server: https://kubernetes.default.svc
     - namespace: biowatch-prod
       server: https://kubernetes.default.svc
 
