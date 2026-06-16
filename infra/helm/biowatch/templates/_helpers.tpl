@@ -46,6 +46,14 @@ app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 {{- end -}}
 
+{{- define "biowatch.postgresSecretName" -}}
+{{- if .Values.postgres.existingSecret -}}
+{{ .Values.postgres.existingSecret }}
+{{- else -}}
+{{ include "biowatch.secretName" . }}
+{{- end -}}
+{{- end -}}
+
 {{- define "biowatch.serviceAccountName" -}}
 {{- printf "%s-%s" (include "biowatch.fullname" .root) .component -}}
 {{- end -}}
