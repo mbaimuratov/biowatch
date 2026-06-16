@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/mbaimuratov/biowatch
-  tag: 08ab6d46b3fa41e8eff690e346a11375e56240c4
+  tag: 96c14c67d2e10a7dfc36d9bc14e38f9aea6218ab
   pullPolicy: IfNotPresent
 
 app:
