@@ -128,6 +128,23 @@ make helm-lint
 make helm-template
 ```
 
+## Dev GitOps Secrets
+
+Dev Kubernetes secrets are managed with SealedSecrets and Argo CD. The BioWatch
+application reads app credentials from `biowatch-secret`; the embedded Postgres
+StatefulSet reads its bootstrap password from `biowatch-dev-postgres-secret`.
+
+Regenerate the dev SealedSecrets from local `.env` values without committing
+plaintext files:
+
+```sh
+kubectl --kubeconfig ~/.kube/biowatch-vm.yaml get pods -A | grep sealed
+kubeseal --kubeconfig ~/.kube/biowatch-vm.yaml --controller-name sealed-secrets-controller --controller-namespace sealed-secrets --format yaml
+```
+
+Commit only the encrypted manifests under `infra/gitops/environments/dev/`.
+Do not commit `.env` or temporary plaintext Secret YAML.
+
 Create a new Alembic migration:
 
 ```sh

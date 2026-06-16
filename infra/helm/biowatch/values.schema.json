@@ -50,6 +50,15 @@
         }
       }
     },
+    "postgres": {
+      "type": "object",
+      "properties": {
+        "existingSecret": { "type": "string" },
+        "passwordKey": { "type": "string" },
+        "database": { "type": "string" },
+        "username": { "type": "string" }
+      }
+    },
     "api": {
       "type": "object",
       "properties": {
