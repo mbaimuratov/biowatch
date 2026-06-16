@@ -13,6 +13,8 @@ spec:
   destinations:
     - namespace: strimzi-system
       server: https://kubernetes.default.svc
+    - namespace: kafka-dev
+      server: https://kubernetes.default.svc
     - namespace: kafka-prod
       server: https://kubernetes.default.svc
     - namespace: monitoring
