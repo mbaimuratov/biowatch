@@ -72,7 +72,7 @@ resource "kubectl_manifest" "traefik_helm_chart_config" {
 resource "helm_release" "sealed_secrets" {
   name       = "sealed-secrets"
   namespace  = local.sealed_secrets_namespace
-  repository = "https://bitnami-labs.github.io/sealed-secrets"
+  repository = "https://bitnami.github.io/sealed-secrets"
   chart      = "sealed-secrets"
   version    = var.sealed_secrets_chart_version
 
