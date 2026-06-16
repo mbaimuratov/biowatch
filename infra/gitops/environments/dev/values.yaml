@@ -61,6 +61,8 @@ indexerConsumer:
   replicaCount: 1
 
 postgres:
+  existingSecret: biowatch-dev-postgres-secret
+  passwordKey: POSTGRES_PASSWORD
   persistence:
     enabled: true
     size: 1Gi

@@ -152,6 +152,8 @@ migration:
       memory: 512Mi
 
 postgres:
+  existingSecret: ""
+  passwordKey: POSTGRES_PASSWORD
   image:
     repository: postgres
     tag: 16-alpine

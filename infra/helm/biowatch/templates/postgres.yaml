@@ -44,8 +44,8 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "biowatch.secretName" . }}
-                  key: POSTGRES_PASSWORD
+                  name: {{ include "biowatch.postgresSecretName" . }}
+                  key: {{ .Values.postgres.passwordKey | default "POSTGRES_PASSWORD" | quote }}
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "{{ .Values.postgres.username }}", "-d", "{{ .Values.postgres.database }}"]
