@@ -1,0 +1,74 @@
+image:
+  repository: ghcr.io/mbaimuratov/biowatch
+  tag: 6a8ca6a3445b233958f595e18d5cdd2003aec821
+  pullPolicy: IfNotPresent
+
+app:
+  environment: development
+  kafka:
+    enabled: true
+    bootstrapServers: biowatch-kafka-kafka-bootstrap.kafka-dev.svc.cluster.local:9092
+    clientId: biowatch-dev
+    indexerTopic: biowatch.paper.ingested.v1
+    indexerGroupId: biowatch-indexer
+
+secret:
+  create: false
+  existingSecret: biowatch-secret
+
+gateway:
+  enabled: true
+  host: biowatch-dev.local
+  parentRefs:
+    - name: traefik-gateway
+      namespace: kube-system
+      sectionName: web
+
+networkPolicy:
+  enabled: true
+  ingressNamespace: kube-system
+  kafkaNamespace: kafka-dev
+
+api:
+  replicaCount: 1
+
+worker:
+  replicaCount: 1
+  metrics:
+    port: 9100
+
+summaryWorker:
+  enabled: true
+  replicaCount: 1
+  metrics:
+    port: 9100
+
+bot:
+  enabled: false
+  replicaCount: 1
+
+scheduler:
+  enabled: true
+  replicaCount: 1
+  intervalSeconds: 60
+
+outboxPublisher:
+  enabled: true
+  replicaCount: 1
+
+indexerConsumer:
+  enabled: true
+  replicaCount: 1
+
+postgres:
+  existingSecret: biowatch-dev-postgres-secret
+  passwordKey: POSTGRES_PASSWORD
+  persistence:
+    enabled: true
+    size: 1Gi
+
+elasticsearch:
+  javaOpts: -Xms512m -Xmx512m
+  persistence:
+    enabled: true
+    size: 2Gi
