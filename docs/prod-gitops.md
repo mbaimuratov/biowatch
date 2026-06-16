@@ -66,7 +66,7 @@ It also applies the bootstrap prerequisites:
 
 - `infra/gitops/environments/prod/sealed-secret.yaml`
 - `infra/gitops/projects/biowatch-project.yaml`
-- `infra/gitops/root/root-app.yaml`
+- `infra/gitops/root/root-app-prod.yaml`
 
 The script intentionally does not run `helm upgrade biowatch ...`. BioWatch is
 deployed by Argo CD from Git after bootstrap.
